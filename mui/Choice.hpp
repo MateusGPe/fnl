@@ -1,6 +1,5 @@
 #pragma once
 #include "Theme.hpp"
-#include "CoreTypes.hpp"
 #include <FL/Fl_Menu_.H>
 #include <FL/fl_draw.H>
 
@@ -119,12 +118,6 @@ namespace mui
             btn_pressed_color = mui::ThemeManager::get_palette().bg_sec;
         }
 
-        void textfont(mui::Font f) { Fl_Menu_::textfont(static_cast<Fl_Font>(f)); }
-        using Fl_Menu_::textfont;
-        void textsize(int s) { Fl_Menu_::textsize(s); }
-        using Fl_Menu_::textsize;
-        void textcolor(mui::Color c) { Fl_Menu_::textcolor(static_cast<Fl_Color>(c)); }
-        using Fl_Menu_::textcolor;
         template <typename T, void (T::*Method)()>
         Choice &on_select(T *instance)
         {

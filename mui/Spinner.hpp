@@ -22,7 +22,8 @@ namespace mui
         {
             // 1. Only draw the custom parent box if the parent itself is damaged.
             // If only a child (like the text input) is damaged, skip the full background redraw.
-            if (damage() & ~FL_DAMAGE_CHILD) {
+            if (damage() & ~FL_DAMAGE_CHILD)
+            {
                 fl_draw_box(Theme::schemes::ROUNDED_BUTTON_UP_BOX, x(), y(), w(), h(), color());
             }
 
@@ -31,7 +32,7 @@ namespace mui
 
             // 3. Overlay the custom arrows
             const auto &palette = mui::ThemeManager::get_palette();
-            
+
             {
                 int cx = up_button_.x() + up_button_.w() / 2;
                 int cy = up_button_.y() + up_button_.h() / 2;
@@ -47,11 +48,11 @@ namespace mui
         }
 
     public:
-        Spinner(int x, int y, int w, int h, const char *label = nullptr) 
+        Spinner(int x, int y, int w, int h, const char *label = nullptr)
             : policy::HoverTracker<policy::CallbackRouter<Fl_Spinner>>(x, y, w, h, label)
         {
             // The parent needs no box, as we handle its rounded box manually in draw()
-            box(Theme::schemes::ROUNDED_BUTTON_UP_BOX); 
+            box(Theme::schemes::ROUNDED_BUTTON_UP_BOX);
             color(mui::ThemeManager::get_palette().input_bg);
             selection_color(mui::ThemeManager::get_palette().selection);
 
@@ -61,7 +62,7 @@ namespace mui
 
             up_button_.box(FL_FLAT_BOX);
             down_button_.box(FL_FLAT_BOX);
-            
+
             up_button_.color(mui::ThemeManager::get_palette().input_bg);
             down_button_.color(mui::ThemeManager::get_palette().input_bg);
 

@@ -1,12 +1,19 @@
 #pragma once
 #include "primitives.hpp"
 
-#define rgba(r, g, b, a) \
-    (((r) & 0xff) << 24 | ((g) & 0xff) << 16 | ((b) & 0xff) << 8 | (unsigned)(a))
-#define frgb fl_rgb_color
+#include <FL/Enumerations.H>
 
 namespace mui
 {
+    constexpr Fl_Color rgba(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 0)
+    {
+        return ((r & 0xff) << 24) | ((g & 0xff) << 16) | ((b & 0xff) << 8) | (a & 0xff);
+    }
+
+    constexpr Fl_Color frgb(uint8_t r, uint8_t g, uint8_t b)
+    {
+        return ((r & 0xff) << 24) | ((g & 0xff) << 16) | ((b & 0xff) << 8);
+    }
     struct Gradient4
     {
         Fl_Color t_start;
@@ -18,55 +25,12 @@ namespace mui
     struct ThemeMetrics
     {
         int radius = 2;
-        int input_focused_border_width = 4;
-        int input_default_border_width = 1;
-        int input_focused_inset = 1;
-        float state_hover_opacity = 0.08f;
-        float shadow_outer_opacity = 0.12f;
-        float shadow_inner_opacity = 0.08f;
-        float border_opacity = 0.2f;
-        float downbox_shadow_opacity = 0.15f;
-        int secondary_radius = 6;
-        float secondary_shadow_base = 0.02f;
-        float secondary_shadow_hover = 0.05f;
         float focus_ring_opacity = 0.2f;
         int focus_ring_width = 3;
-        int secondary_border_width = 1;
-        float secondary_downbox_shadow = 0.10f;
-        double cursor_blink_rate = 0.53;
-        int input_text_padding = 4;
-        int toggle_track_height = 18;
-        int toggle_knob_size = 20;
-        int toggle_focus_padding = 4;
-        int toggle_shadow_offset = 1;
-        int toggle_label_padding = 8;
-        float toggle_track_hover_factor = 0.9f;
-        float toggle_outline_hover_factor = 0.7f;
-        float toggle_thumb_hover_factor = 0.95f;
-        float toggle_focus_factor = 0.5f;
-        float toggle_shadow_factor = 0.15f;
-        int button_focus_padding = 1;
-        int button_focus_width = 2;
-        int checkbox_size = 18;
-        int checkbox_corner_radius = 3;
-        float checkbox_hover_factor = 0.85f;
-        int checkbox_border_width = 1;
-        int checkbox_focus_padding = 2;
-        int checkbox_focus_width = 2;
-        int checkbox_tick_width = 2;
-        int checkbox_tick_padding = 4;
-        int checkbox_label_padding = 8;
         int choice_arrow_padding = 14;
         int choice_arrow_thickness = 2;
         int choice_arrow_height = 4;
-        int choice_text_padding = 8;
         int choice_arrow_size = 8;
-        int radio_size = 18;
-        int radio_dot_size = 8;
-        float radio_hover_factor = 0.85f;
-        int radio_border_width = 2;
-        int radio_focus_padding = 2;
-        int radio_label_padding = 8;
         int slider_track_height = 4;
         int slider_thumb_size = 16;
         int slider_thumb_focus_halo_size = 24;
@@ -75,26 +39,15 @@ namespace mui
         int valueslider_input_width = 40;
         int valueslider_input_height = 30;
         int valueslider_min_slider_size = 20;
-        int spinner_button_width = 28;
         int spinner_arrow_size = 8;
-        int spinner_arrow_thickness = 2;
         int progress_height = 6;
         int progress_corner_radius = 3;
         int imageviewer_grid_size = 20;
         int imageviewer_handle_size = 8;
         int imageviewer_handle_hit_padding = 2;
         int imageviewer_selection_dash_width = 1;
-        float state_focus_opacity = 0.12f;
-        float state_pressed_opacity = 0.12f;
         float widget_disabled_label_factor = 0.5f;
-        int svg_stroke_width = 1;
-        int roller_line_spacing = 10;
-        float roller_fade_power = 2.5f;
 
-        int tab_height = 30;
-        int tab_active_line_thickness = 4;
-        int tab_close_icon_size = 10;
-        int tab_close_padding = 4;
     };
 
     struct ThemePalette
@@ -120,7 +73,7 @@ namespace mui
         ThemeMetrics metrics;
     };
 
- const ThemePalette DARK_PALETTE = {
+ constexpr ThemePalette DARK_PALETTE = {
             frgb(39, 45, 61),     // bg_main: Surface/Base
             frgb(27, 32, 45),     // bg_sec: Canvas/Shade
             frgb(255, 255, 255),  // fg_main: Tint
@@ -157,7 +110,7 @@ namespace mui
             frgb(255, 255, 255)   // spinner_arrow
         }; 
     // GRADIENT_PALETTE
-    // const ThemePalette DARK_PALETTE = {
+    // constexpr ThemePalette DARK_PALETTE = {
     //     frgb(240, 240, 240),  // bg_main: Surface/Base
     //     frgb(255, 255, 255),  // bg_sec: Canvas/Shade
     //     frgb(30, 30, 30),     // fg_main: Tint
@@ -194,7 +147,7 @@ namespace mui
     //     frgb(30, 30, 30)      // spinner_arrow
     // };
     // FUTURISTIC_DARK_PALETTE
-    /* const ThemePalette DARK_PALETTE = {
+    /* constexpr ThemePalette DARK_PALETTE = {
         frgb(20, 20, 35),    // bg_main: Surface/Base
         frgb(30, 30, 45),    // bg_sec: Canvas/Shade
         frgb(230, 230, 240), // fg_main: Tint

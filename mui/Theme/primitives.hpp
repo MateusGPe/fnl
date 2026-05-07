@@ -268,6 +268,56 @@ namespace mui
                 fl_xyline(fill_x, current_y, fill_x + fill_w - 1);
             }
         }
+        /*
+                inline void draw_checkbox_box(int x, int y, int size, bool is_checked, Fl_Color bg, Fl_Color border_color)
+                {
+                    fl_color(is_checked ? bg : border_color);
+                    if (!is_checked)
+                    {
+                        fl_rounded_rect(x, y, size, size, mui::current_palette->metrics.checkbox_corner_radius);
+                        fl_color(bg);
+                        fl_rounded_rectf(x + mui::current_palette->metrics.checkbox_border_width, y + mui::current_palette->metrics.checkbox_border_width, size - (mui::current_palette->metrics.checkbox_border_width * 2), size - (mui::current_palette->metrics.checkbox_border_width * 2), mui::current_palette->metrics.checkbox_corner_radius - mui::current_palette->metrics.checkbox_border_width);
+                    }
+                    else
+                    {
+                        fl_rounded_rectf(x, y, size, size, mui::current_palette->metrics.checkbox_corner_radius);
+                    }
+                }
+
+                inline void draw_checkbox_focus(int x, int y, int size, Fl_Color focus_color)
+                {
+                    fl_color(focus_color);
+                    fl_line_style(FL_SOLID, mui::current_palette->metrics.checkbox_focus_width);
+                    fl_rounded_rect(x - mui::current_palette->metrics.checkbox_focus_padding, y - mui::current_palette->metrics.checkbox_focus_padding, size + (mui::current_palette->metrics.checkbox_focus_padding * 2), size + (mui::current_palette->metrics.checkbox_focus_padding * 2), mui::current_palette->metrics.checkbox_corner_radius + 1);
+                    fl_line_style(0);
+                }
+
+                inline void draw_checkbox_tick(int x, int y, int size, Fl_Color tick_color)
+                {
+                    fl_color(tick_color);
+                    fl_line_style(FL_SOLID, mui::current_palette->metrics.checkbox_tick_width);
+                    fl_begin_line();
+                    fl_vertex(x + mui::current_palette->metrics.checkbox_tick_padding, y + size / 2);
+                    fl_vertex(x + 8, y + size - 5);
+                    fl_vertex(x + size - mui::current_palette->metrics.checkbox_tick_padding, y + mui::current_palette->metrics.checkbox_tick_padding);
+                    fl_end_line();
+                    fl_line_style(0);
+                }
+
+                inline void draw_radio_focus(int cx, int cy, int size, Fl_Color focus_color)
+                {
+                    fl_color(focus_color);
+                    int focus_size = size + (mui::current_palette->metrics.radio_focus_padding * 2);
+                    fl_pie(cx - focus_size / 2, cy - focus_size / 2, focus_size, focus_size, 0, 360);
+                }
+
+                inline void draw_radio_border(int x, int y, int size, Fl_Color border_color)
+                {
+                    fl_color(border_color);
+                    fl_line_style(FL_SOLID, mui::current_palette->metrics.radio_border_width);
+                    fl_arc(x, y, size, size, 0, 360);
+                    fl_line_style(0);
+                } */
 
         inline void draw_radio_dot(int cx, int cy, int dot_size, Fl_Color dot_color)
         {

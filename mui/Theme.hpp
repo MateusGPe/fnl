@@ -6,6 +6,7 @@
 #include <FL/Fl_Tooltip.H>
 #include <string>
 #include <vector>
+#include <unordered_map>
 #include <cstdio>
 #include <memory>
 
@@ -39,24 +40,22 @@ namespace mui
     {
     private:
         static inline const ThemePalette *current_palette_ = &DARK_PALETTE;
-        static inline std::unique_ptr<engine::IThemeRenderer> renderer_ = std::make_unique<engine::SolidRenderer>();
         static inline bool boxes_registered_ = false;
 
     public:
         ThemeManager() = delete;
 
         static const ThemePalette &get_palette() { return *current_palette_; }
-        static const engine::IThemeRenderer &get_renderer() { return *renderer_; }
 
         static void register_boxtypes();
 
-        static void apply_theme()
+        static void apply_theme(const ThemePalette &palette)
         {
+            current_palette_ = &palette;
+
             register_boxtypes();
 
             Fl::scrollbar_size(15);
-
-            const ThemePalette &palette = *current_palette_;
 
             unsigned char bg_r = (palette.bg_main >> 24) & 0xFF, bg_g = (palette.bg_main >> 16) & 0xFF, bg_b = (palette.bg_main >> 8) & 0xFF;
             unsigned char bg2_r = (palette.bg_sec >> 24) & 0xFF, bg2_g = (palette.bg_sec >> 16) & 0xFF, bg2_b = (palette.bg_sec >> 8) & 0xFF;
@@ -72,68 +71,83 @@ namespace mui
             Fl_Tooltip::textcolor(palette.tt_fg);
             Fl::redraw();
         }
+        
+        static void set_palette(const ThemePalette &palette)
+        {
+            apply_theme(palette);
+        }
     };
 
-    // ---------------------------------------------------------
-    // FLTK Box Bridge Wrappers (Route FLTK C-calls to the OOP Renderer)
-    // ---------------------------------------------------------
     namespace engine
     {
-        // Frames & Boxes
-        inline void btn_up_frame(int x, int y, int w, int h, Fl_Color) { ThemeManager::get_renderer().draw_frame(x, y, w, h, ThemeManager::get_palette().btn_frame, Fl::draw_box_active(), ThemeManager::get_palette()); }
-        inline void btn_up_box(int x, int y, int w, int h, Fl_Color) { ThemeManager::get_renderer().draw_box(x, y, w, h, ThemeManager::get_palette().btn_grad, ThemeManager::get_palette().btn_frame, 2, Fl::draw_box_active(), ThemeManager::get_palette()); }
-        inline void hover_up_frame(int x, int y, int w, int h, Fl_Color) { ThemeManager::get_renderer().draw_frame(x, y, w, h, ThemeManager::get_palette().hover_frame, Fl::draw_box_active(), ThemeManager::get_palette()); }
-        inline void hover_up_box(int x, int y, int w, int h, Fl_Color) { ThemeManager::get_renderer().draw_box(x, y, w, h, ThemeManager::get_palette().hover_grad, ThemeManager::get_palette().hover_frame, 2, Fl::draw_box_active(), ThemeManager::get_palette()); }
-        inline void down_frame(int x, int y, int w, int h, Fl_Color) { ThemeManager::get_renderer().draw_frame(x, y, w, h, ThemeManager::get_palette().down_frame, Fl::draw_box_active(), ThemeManager::get_palette()); }
-        inline void down_box(int x, int y, int w, int h, Fl_Color) { ThemeManager::get_renderer().draw_box(x, y, w, h, ThemeManager::get_palette().down_grad, ThemeManager::get_palette().down_frame, 2, Fl::draw_box_active(), ThemeManager::get_palette()); }
-        inline void def_btn_frame(int x, int y, int w, int h, Fl_Color) { ThemeManager::get_renderer().draw_frame(x, y, w, h, ThemeManager::get_palette().def_btn_frame, Fl::draw_box_active(), ThemeManager::get_palette()); }
-        inline void def_btn_box(int x, int y, int w, int h, Fl_Color) { ThemeManager::get_renderer().draw_box(x, y, w, h, ThemeManager::get_palette().def_btn_grad, ThemeManager::get_palette().def_btn_frame, 2, Fl::draw_box_active(), ThemeManager::get_palette()); }
-
-        inline void thin_up_frame(int x, int y, int w, int h, Fl_Color) { ThemeManager::get_renderer().draw_static_frame(x, y, w, h, ThemeManager::get_palette().thin_up_frame, Fl::draw_box_active(), ThemeManager::get_palette()); }
-        inline void panel_box(int x, int y, int w, int h, Fl_Color c)
+        template <auto GradPtr, auto FramePtr>
+        inline void tpl_box(int x, int y, int w, int h, Fl_Color)
         {
-            Gradient4 fill = {c, c, c, c};
-            ThemeManager::get_renderer().draw_box(x, y, w, h, fill, ThemeManager::get_palette().btn_frame, 1, Fl::draw_box_active(), ThemeManager::get_palette());
-        }
-        inline void menu_popup_box(int x, int y, int w, int h, Fl_Color c)
-        {
-            Gradient4 fill = {c, c, c, c};
-            ThemeManager::get_renderer().draw_box(x, y, w, h, fill, ThemeManager::get_palette().btn_frame, 1, Fl::draw_box_active(), ThemeManager::get_palette());
-        }
-        inline void thin_up_box(int x, int y, int w, int h, Fl_Color c)
-        {
-            Gradient4 fill = {c, c, c, c};
-            ThemeManager::get_renderer().draw_box(x, y, w, h, fill, ThemeManager::get_palette().thin_up_frame, 1, Fl::draw_box_active(), ThemeManager::get_palette());
-        }
-        inline void thin_down_frame(int x, int y, int w, int h, Fl_Color) { ThemeManager::get_renderer().draw_static_frame(x, y, w, h, ThemeManager::get_palette().thin_down_frame, Fl::draw_box_active(), ThemeManager::get_palette()); }
-        inline void thin_down_box(int x, int y, int w, int h, Fl_Color c)
-        {
-            fl_color(core::activated_color(c, Fl::draw_box_active()));
-            fl_rectf(x + 1, y + 1, w - 2, h - 2);
-            ThemeManager::get_renderer().draw_static_frame(x, y, w, h, ThemeManager::get_palette().thin_down_frame, Fl::draw_box_active(), ThemeManager::get_palette());
+            engine::draw_box(x, y, w, h, ThemeManager::get_palette().*GradPtr, ThemeManager::get_palette().*FramePtr, 2, Fl::draw_box_active(), ThemeManager::get_palette());
         }
 
-        inline void input_frame(int x, int y, int w, int h, Fl_Color) { ThemeManager::get_renderer().draw_static_frame(x, y, w, h, ThemeManager::get_palette().input_frame, Fl::draw_box_active(), ThemeManager::get_palette()); }
-        inline void input_box(int x, int y, int w, int h, Fl_Color c)
+        template <auto FramePtr>
+        inline void tpl_frame(int x, int y, int w, int h, Fl_Color)
         {
-            fl_color(core::activated_color(c, Fl::draw_box_active()));
-            fl_rectf(x + 2, y + 2, w - 4, h - 4);
-            ThemeManager::get_renderer().draw_static_frame(x, y, w, h, ThemeManager::get_palette().input_frame, Fl::draw_box_active(), ThemeManager::get_palette());
+            engine::draw_frame(x, y, w, h, ThemeManager::get_palette().*FramePtr, Fl::draw_box_active(), ThemeManager::get_palette());
+        }
+
+        template <auto FramePtr>
+        inline void tpl_static_frame(int x, int y, int w, int h, Fl_Color)
+        {
+            engine::draw_static_frame(x, y, w, h, ThemeManager::get_palette().*FramePtr, Fl::draw_box_active(), ThemeManager::get_palette());
+        }
+
+        template <auto FramePtr>
+        inline void tpl_flat_box(int x, int y, int w, int h, Fl_Color c)
+        {
+            Gradient4 fill = {c, c, c, c};
+            engine::draw_box(x, y, w, h, fill, ThemeManager::get_palette().*FramePtr, 1, Fl::draw_box_active(), ThemeManager::get_palette());
+        }
+
+        template <auto FramePtr>
+        inline void tpl_input_box(int x, int y, int w, int h, Fl_Color c)
+        {
+            bool active = Fl::draw_box_active();
+            int radius = ThemeManager::get_palette().metrics.radius;
+            fl_color(core::activated_color(c, active));
+            
+            if (radius > 0)
+                fl_rounded_rectf(x + 2, y + 2, w - 4, h - 4, radius);
+            else
+                fl_rectf(x + 2, y + 2, w - 4, h - 4);
+                
+            engine::draw_static_frame(x, y, w, h, ThemeManager::get_palette().*FramePtr, active, ThemeManager::get_palette());
+        }
+        
+        template <auto FramePtr>
+        inline void tpl_thin_down_box(int x, int y, int w, int h, Fl_Color c)
+        {
+            bool active = Fl::draw_box_active();
+            int radius = ThemeManager::get_palette().metrics.radius;
+            fl_color(core::activated_color(c, active));
+            
+            if (radius > 0)
+                fl_rounded_rectf(x + 1, y + 1, w - 2, h - 2, radius);
+            else
+                fl_rectf(x + 1, y + 1, w - 2, h - 2);
+                
+            engine::draw_static_frame(x, y, w, h, ThemeManager::get_palette().*FramePtr, active, ThemeManager::get_palette());
         }
 
         inline void smart_down_frame(int x, int y, int w, int h, Fl_Color c)
         {
             if (c == FL_BACKGROUND2_COLOR)
-                ThemeManager::get_renderer().draw_static_frame(x, y, w, h, ThemeManager::get_palette().input_frame, Fl::draw_box_active(), ThemeManager::get_palette());
+                tpl_static_frame<&ThemePalette::input_frame>(x, y, w, h, c);
             else
-                ThemeManager::get_renderer().draw_frame(x, y, w, h, ThemeManager::get_palette().down_frame, Fl::draw_box_active(), ThemeManager::get_palette());
+                tpl_frame<&ThemePalette::down_frame>(x, y, w, h, c);
         }
         inline void smart_down_box(int x, int y, int w, int h, Fl_Color c)
         {
             if (c == FL_BACKGROUND2_COLOR)
-                input_box(x, y, w, h, c);
+                tpl_input_box<&ThemePalette::input_frame>(x, y, w, h, c);
             else
-                down_box(x, y, w, h, c);
+                tpl_box<&ThemePalette::down_grad, &ThemePalette::down_frame>(x, y, w, h, c);
         }
 
         inline void radio_round_down_box(int x, int y, int w, int h, Fl_Color c)
@@ -143,97 +157,63 @@ namespace mui
             fl_color(core::activated_color(ThemeManager::get_palette().input_frame.out_top, Fl::draw_box_active()));
             fl_arc(x, y, w, h, 0.0, 360.0);
         }
-
-        // Rounded wrappers
-        inline void rounded_btn_up_frame(int x, int y, int w, int h, Fl_Color) { core::draw_rounded_frame_h(x, y, w, h, ThemeManager::get_palette().btn_frame, ThemeManager::get_palette().metrics.radius, Fl::draw_box_active()); }
-        inline void rounded_btn_up_box(int x, int y, int w, int h, Fl_Color)
-        {
-            Gradient4 g = ThemeManager::get_palette().btn_grad;
-            core::draw_rounded_gradient_box(x + 2, y + 2, w - 4, h - 4, g.t_start, g.t_end, g.b_start, g.b_end, ThemeManager::get_palette().metrics.radius, Fl::draw_box_active());
-            rounded_btn_up_frame(x, y, w, h, 0);
-        }
-        inline void rounded_hover_up_frame(int x, int y, int w, int h, Fl_Color) { core::draw_rounded_frame_h(x, y, w, h, ThemeManager::get_palette().hover_frame, ThemeManager::get_palette().metrics.radius, Fl::draw_box_active()); }
-        inline void rounded_hover_up_box(int x, int y, int w, int h, Fl_Color)
-        {
-            Gradient4 g = ThemeManager::get_palette().hover_grad;
-            core::draw_rounded_gradient_box(x + 2, y + 2, w - 4, h - 4, g.t_start, g.t_end, g.b_start, g.b_end, ThemeManager::get_palette().metrics.radius, Fl::draw_box_active());
-            rounded_hover_up_frame(x, y, w, h, 0);
-        }
-        inline void rounded_down_frame(int x, int y, int w, int h, Fl_Color) { core::draw_rounded_frame_h(x, y, w, h, ThemeManager::get_palette().down_frame, ThemeManager::get_palette().metrics.radius, Fl::draw_box_active()); }
-        inline void rounded_down_box(int x, int y, int w, int h, Fl_Color)
-        {
-            Gradient4 g = ThemeManager::get_palette().down_grad;
-            core::draw_rounded_gradient_box(x + 2, y + 2, w - 4, h - 4, g.t_start, g.t_end, g.b_start, g.b_end, ThemeManager::get_palette().metrics.radius, Fl::draw_box_active());
-            rounded_down_frame(x, y, w, h, 0);
-        }
-        inline void rounded_thin_up_frame(int x, int y, int w, int h, Fl_Color) { core::draw_rounded_frame_h(x, y, w, h, ThemeManager::get_palette().thin_up_frame, ThemeManager::get_palette().metrics.radius, Fl::draw_box_active()); }
-        inline void rounded_thin_up_box(int x, int y, int w, int h, Fl_Color c)
-        {
-            fl_color(core::activated_color(c, Fl::draw_box_active()));
-            fl_rounded_rectf(x + 1, y + 1, w - 2, h - 2, ThemeManager::get_palette().metrics.radius);
-            rounded_thin_up_frame(x, y, w, h, c);
-        }
-        inline void rounded_input_frame(int x, int y, int w, int h, Fl_Color) { core::draw_rounded_frame_h(x, y, w, h, ThemeManager::get_palette().input_frame, ThemeManager::get_palette().metrics.radius, Fl::draw_box_active()); }
-        inline void rounded_input_box(int x, int y, int w, int h, Fl_Color c)
-        {
-            fl_color(core::activated_color(c, Fl::draw_box_active()));
-            fl_rounded_rectf(x + 2, y + 2, w - 4, h - 4, ThemeManager::get_palette().metrics.radius);
-            rounded_input_frame(x, y, w, h, c);
-        }
-
-        // Component Dispatchers (To not break existing FLTK widget codes relying on engine::dispatch...)
-        inline void dispatch_button(int x, int y, int w, int h, const WidgetState &state) { ThemeManager::get_renderer().draw_button(x, y, w, h, state, ThemeManager::get_palette()); }
-        inline void dispatch_choice(int x, int y, int w, int h, const WidgetState &state, bool is_pressed) { ThemeManager::get_renderer().draw_choice(x, y, w, h, state, is_pressed, ThemeManager::get_palette()); }
+        
+        inline void dispatch_button(int x, int y, int w, int h, const WidgetState &state) { draw_button(x, y, w, h, state, ThemeManager::get_palette()); }
+        inline void dispatch_choice(int x, int y, int w, int h, const WidgetState &state, bool is_pressed) { draw_choice(x, y, w, h, state, is_pressed, ThemeManager::get_palette()); }
     }
 
-    // Must be declared after bridges are defined so FLTK functions exist to hook to
     inline void ThemeManager::register_boxtypes()
     {
         if (boxes_registered_)
             return;
 
         Fl::scheme("gtk+");
-        Fl::set_boxtype(Theme::schemes::ROUNDED_BUTTON_UP_BOX, engine::rounded_btn_up_box, 2, 2, 4, 4);
-        Fl::set_boxtype(Theme::schemes::ROUNDED_BUTTON_UP_FRAME, engine::rounded_btn_up_frame, 2, 2, 4, 4);
-        Fl::set_boxtype(Theme::schemes::ROUNDED_HOVERED_UP_BOX, engine::rounded_hover_up_box, 2, 2, 4, 4);
-        Fl::set_boxtype(Theme::schemes::ROUNDED_HOVERED_UP_FRAME, engine::rounded_hover_up_frame, 2, 2, 4, 4);
-        Fl::set_boxtype(Theme::schemes::ROUNDED_DEPRESSED_DOWN_BOX, engine::rounded_down_box, 2, 2, 4, 4);
-        Fl::set_boxtype(Theme::schemes::ROUNDED_DEPRESSED_DOWN_FRAME, engine::rounded_down_frame, 2, 2, 4, 4);
-        Fl::set_boxtype(Theme::schemes::ROUNDED_INPUT_THIN_DOWN_BOX, engine::rounded_input_box, 2, 3, 4, 6);
-        Fl::set_boxtype(Theme::schemes::ROUNDED_INPUT_THIN_DOWN_FRAME, engine::rounded_input_frame, 2, 3, 4, 6);
-        Fl::set_boxtype(Theme::schemes::ROUNDED_PANEL_THIN_UP_BOX, engine::rounded_thin_up_box, 1, 1, 2, 2);
-        Fl::set_boxtype(Theme::schemes::ROUNDED_PANEL_THIN_UP_FRAME, engine::rounded_thin_up_frame, 1, 1, 2, 2);
-        Fl::set_boxtype(FL_GTK_UP_BOX, engine::btn_up_box, 2, 2, 4, 4);
-        Fl::set_boxtype(FL_GTK_UP_FRAME, engine::btn_up_frame, 2, 2, 4, 4);
-        Fl::set_boxtype(FL_PLASTIC_UP_BOX, engine::hover_up_box, 2, 2, 4, 4);
-        Fl::set_boxtype(FL_PLASTIC_UP_FRAME, engine::hover_up_frame, 2, 2, 4, 4);
-        Fl::set_boxtype(FL_PLASTIC_DOWN_BOX, engine::down_box, 2, 2, 4, 4);
-        Fl::set_boxtype(FL_PLASTIC_DOWN_FRAME, engine::down_frame, 2, 2, 4, 4);
-        Fl::set_boxtype(FL_DIAMOND_UP_BOX, engine::def_btn_box, 2, 2, 4, 4);
-        Fl::set_boxtype(FL_PLASTIC_THIN_UP_BOX, engine::hover_up_box, 2, 2, 4, 4);
-        Fl::set_boxtype(FL_DIAMOND_DOWN_BOX, engine::down_box, 2, 2, 4, 4);
+        
+        // Blanketing core box types mapped to standard offsets.
+        Fl::set_boxtype(FL_GTK_UP_BOX, engine::tpl_box<&ThemePalette::btn_grad, &ThemePalette::btn_frame>, 2, 2, 4, 4);
+        Fl::set_boxtype(FL_GTK_UP_FRAME, engine::tpl_frame<&ThemePalette::btn_frame>, 2, 2, 4, 4);
+        Fl::set_boxtype(FL_PLASTIC_UP_BOX, engine::tpl_box<&ThemePalette::hover_grad, &ThemePalette::hover_frame>, 2, 2, 4, 4);
+        Fl::set_boxtype(FL_PLASTIC_UP_FRAME, engine::tpl_frame<&ThemePalette::hover_frame>, 2, 2, 4, 4);
+        Fl::set_boxtype(FL_PLASTIC_DOWN_BOX, engine::tpl_box<&ThemePalette::down_grad, &ThemePalette::down_frame>, 2, 2, 4, 4);
+        Fl::set_boxtype(FL_PLASTIC_DOWN_FRAME, engine::tpl_frame<&ThemePalette::down_frame>, 2, 2, 4, 4);
+        Fl::set_boxtype(FL_DIAMOND_UP_BOX, engine::tpl_box<&ThemePalette::def_btn_grad, &ThemePalette::def_btn_frame>, 2, 2, 4, 4);
+        Fl::set_boxtype(FL_PLASTIC_THIN_UP_BOX, engine::tpl_box<&ThemePalette::hover_grad, &ThemePalette::hover_frame>, 2, 2, 4, 4);
+        Fl::set_boxtype(FL_DIAMOND_DOWN_BOX, engine::tpl_box<&ThemePalette::down_grad, &ThemePalette::down_frame>, 2, 2, 4, 4);
         Fl::set_boxtype(FL_GTK_DOWN_BOX, engine::smart_down_box, 2, 2, 4, 4);
         Fl::set_boxtype(FL_GTK_DOWN_FRAME, engine::smart_down_frame, 2, 2, 4, 4);
-        Fl::set_boxtype(FL_PLASTIC_THIN_DOWN_BOX, engine::input_box, 2, 3, 4, 6);
-        Fl::set_boxtype(FL_PLASTIC_ROUND_DOWN_BOX, engine::input_frame, 2, 3, 4, 6);
+        Fl::set_boxtype(FL_PLASTIC_THIN_DOWN_BOX, engine::tpl_input_box<&ThemePalette::input_frame>, 2, 3, 4, 6);
+        Fl::set_boxtype(FL_PLASTIC_ROUND_DOWN_BOX, engine::tpl_static_frame<&ThemePalette::input_frame>, 2, 3, 4, 6);
         Fl::set_boxtype(FL_GTK_ROUND_DOWN_BOX, engine::radio_round_down_box, 3, 3, 6, 6);
-        Fl::set_boxtype(FL_GTK_THIN_UP_BOX, engine::thin_up_box, 1, 1, 2, 2);
-        Fl::set_boxtype(FL_GTK_THIN_UP_FRAME, engine::thin_up_frame, 1, 1, 2, 2);
-        Fl::set_boxtype(FL_GTK_THIN_DOWN_BOX, engine::thin_down_box, 1, 1, 2, 2);
-        Fl::set_boxtype(FL_GTK_THIN_DOWN_FRAME, engine::thin_down_frame, 1, 1, 2, 2);
-        Fl::set_boxtype(Theme::schemes::BUTTON_DOWN_BOX, engine::down_box, 2, 2, 4, 4);
-        Fl::set_boxtype(Theme::schemes::MENU_POPUP_BOX, engine::menu_popup_box, 1, 1, 2, 2);
-        Fl::set_boxtype(FL_UP_BOX, engine::panel_box, 1, 1, 2, 2);
+        Fl::set_boxtype(FL_GTK_THIN_UP_BOX, engine::tpl_flat_box<&ThemePalette::thin_up_frame>, 1, 1, 2, 2);
+        Fl::set_boxtype(FL_GTK_THIN_UP_FRAME, engine::tpl_static_frame<&ThemePalette::thin_up_frame>, 1, 1, 2, 2);
+        Fl::set_boxtype(FL_GTK_THIN_DOWN_BOX, engine::tpl_thin_down_box<&ThemePalette::thin_down_frame>, 1, 1, 2, 2);
+        Fl::set_boxtype(FL_GTK_THIN_DOWN_FRAME, engine::tpl_static_frame<&ThemePalette::thin_down_frame>, 1, 1, 2, 2);
+        Fl::set_boxtype(FL_UP_BOX, engine::tpl_flat_box<&ThemePalette::btn_frame>, 1, 1, 2, 2);
         Fl::set_boxtype(FL_DOWN_BOX, engine::smart_down_box, 4, 2, 8, 4);
         Fl::set_boxtype(FL_ROUND_DOWN_BOX, engine::radio_round_down_box, 2, 2, 4, 4);
-        Fl::set_boxtype(FL_EMBOSSED_BOX, engine::btn_up_box, 2, 1, 4, 2);
-        Fl::set_boxtype(FL_ENGRAVED_BOX, engine::thin_down_box, 2, 2, 4, 4);
-        Fl::set_boxtype(FL_GLEAM_UP_BOX, engine::btn_up_box, 2, 2, 4, 4);
+        Fl::set_boxtype(FL_EMBOSSED_BOX, engine::tpl_box<&ThemePalette::btn_grad, &ThemePalette::btn_frame>, 2, 1, 4, 2);
+        Fl::set_boxtype(FL_ENGRAVED_BOX, engine::tpl_thin_down_box<&ThemePalette::thin_down_frame>, 2, 2, 4, 4);
+        Fl::set_boxtype(FL_GLEAM_UP_BOX, engine::tpl_box<&ThemePalette::btn_grad, &ThemePalette::btn_frame>, 2, 2, 4, 4);
         Fl::set_boxtype(FL_GLEAM_DOWN_BOX, engine::smart_down_box, 2, 2, 4, 4);
         Fl::set_boxtype(FL_GLEAM_ROUND_UP_BOX, FL_FLAT_BOX);
+
+        // Custom Themes Boxes
+        Fl::set_boxtype(Theme::schemes::ROUNDED_BUTTON_UP_BOX, engine::tpl_box<&ThemePalette::btn_grad, &ThemePalette::btn_frame>, 2, 2, 4, 4);
+        Fl::set_boxtype(Theme::schemes::ROUNDED_BUTTON_UP_FRAME, engine::tpl_frame<&ThemePalette::btn_frame>, 2, 2, 4, 4);
+        Fl::set_boxtype(Theme::schemes::ROUNDED_HOVERED_UP_BOX, engine::tpl_box<&ThemePalette::hover_grad, &ThemePalette::hover_frame>, 2, 2, 4, 4);
+        Fl::set_boxtype(Theme::schemes::ROUNDED_HOVERED_UP_FRAME, engine::tpl_frame<&ThemePalette::hover_frame>, 2, 2, 4, 4);
+        Fl::set_boxtype(Theme::schemes::ROUNDED_DEPRESSED_DOWN_BOX, engine::tpl_box<&ThemePalette::down_grad, &ThemePalette::down_frame>, 2, 2, 4, 4);
+        Fl::set_boxtype(Theme::schemes::ROUNDED_DEPRESSED_DOWN_FRAME, engine::tpl_frame<&ThemePalette::down_frame>, 2, 2, 4, 4);
+        Fl::set_boxtype(Theme::schemes::ROUNDED_INPUT_THIN_DOWN_BOX, engine::tpl_input_box<&ThemePalette::input_frame>, 2, 3, 4, 6);
+        Fl::set_boxtype(Theme::schemes::ROUNDED_INPUT_THIN_DOWN_FRAME, engine::tpl_static_frame<&ThemePalette::input_frame>, 2, 3, 4, 6);
+        Fl::set_boxtype(Theme::schemes::ROUNDED_PANEL_THIN_UP_BOX, engine::tpl_flat_box<&ThemePalette::thin_up_frame>, 1, 1, 2, 2);
+        Fl::set_boxtype(Theme::schemes::ROUNDED_PANEL_THIN_UP_FRAME, engine::tpl_static_frame<&ThemePalette::thin_up_frame>, 1, 1, 2, 2);
+        Fl::set_boxtype(Theme::schemes::BUTTON_DOWN_BOX, engine::tpl_box<&ThemePalette::down_grad, &ThemePalette::down_frame>, 2, 2, 4, 4);
+        Fl::set_boxtype(Theme::schemes::MENU_POPUP_BOX, engine::tpl_flat_box<&ThemePalette::btn_frame>, 1, 1, 2, 2);
+        
         Fl::set_boxtype(Theme::schemes::BG_BOX, FL_FLAT_BOX);
         Fl::set_boxtype(Theme::schemes::BG_DOWN_BOX, Theme::schemes::BG_BOX);
-        Fl::set_boxtype(Theme::schemes::TOOLBAR_FRAME, engine::thin_up_frame, 1, 1, 2, 2);
+        Fl::set_boxtype(Theme::schemes::TOOLBAR_FRAME, engine::tpl_static_frame<&ThemePalette::thin_up_frame>, 1, 1, 2, 2);
         Fl::set_boxtype(Theme::schemes::TEXT_INSET_BOX, [](int, int, int, int, Fl_Color) {}, 8, 0, 16, 0);
 
         Fl::visible_focus(0);
@@ -280,7 +260,7 @@ namespace mui
             Fl::set_font(FL_HELVETICA_ITALIC, font_italic);
             Fl::set_font(FL_HELVETICA_BOLD_ITALIC, font_bold_italic);
 
-            ThemeManager::apply_theme();
+            ThemeManager::apply_theme(DARK_PALETTE);
             apply_global_settings();
         }
     }
