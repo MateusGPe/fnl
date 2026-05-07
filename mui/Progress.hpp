@@ -14,7 +14,7 @@ namespace mui
         {
             fl_push_clip(x(), y(), w(), h());
 
-            const auto& palette = ThemeManager::get_palette();
+            const auto &palette = ThemeManager::get_palette();
 
             // Clear the widget area using the assigned background color
             fl_draw_box(FL_FLAT_BOX, x(), y(), w(), h(), color());
@@ -54,7 +54,7 @@ namespace mui
         }
 
     public:
-        Progress(int x, int y, int w, int h, const char *l = nullptr) 
+        Progress(int x, int y, int w, int h, const char *l = nullptr)
             : Fl_Progress(x, y, w, h, l)
         {
             // Set up sane flat defaults to prevent native artifacts

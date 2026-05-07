@@ -72,80 +72,43 @@ namespace mui
         Fl_Color spinner_arrow;
         ThemeMetrics metrics;
     };
+    // The default palette, with gradients enabled.
+    constexpr ThemePalette DARK_PALETTE = {
+        frgb(240, 240, 240),  // bg_main: Surface/Base
+        frgb(255, 255, 255),  // bg_sec: Canvas/Shade
+        frgb(30, 30, 30),     // fg_main: Tint
+        frgb(150, 150, 150),  // inactive: Inactive/Border
+        frgb(0, 120, 215),    // selection: Primary Main
+        frgb(220, 50, 47),    // error_main: Error Main
+        frgb(42, 157, 143),   // success_main: Success Main
+        frgb(255, 255, 255),  // free_bg
+        frgb(255, 255, 220),  // tt_bg
+        frgb(0, 0, 0),        // tt_fg
 
- constexpr ThemePalette DARK_PALETTE = {
-            frgb(39, 45, 61),     // bg_main: Surface/Base
-            frgb(27, 32, 45),     // bg_sec: Canvas/Shade
-            frgb(255, 255, 255),  // fg_main: Tint
-            frgb(60, 68, 85),     // inactive: Inactive/Border
-            frgb(255, 107, 0),    // selection: Primary Main
-            frgb(230, 57, 70),    // error_main: Error Main
-            frgb(42, 157, 143),   // success_main: Success Main
-            frgb(27, 32, 45),     // free_bg
-            frgb(39, 45, 61),     // tt_bg
-            frgb(255, 255, 255),  // tt_fg
+        {frgb(252, 252, 252), frgb(245, 245, 245), frgb(235, 235, 235), frgb(225, 225, 225)}, // btn_grad
+        {frgb(170, 170, 170), frgb(170, 170, 170), frgb(170, 170, 170), frgb(255, 255, 255), frgb(255, 255, 255), frgb(255, 255, 255), 0, 0, nullptr}, // btn_frame
 
-            {frgb(39, 45, 61), frgb(39, 45, 61), frgb(39, 45, 61), frgb(39, 45, 61)}, // btn_grad (solid surface)
-            {frgb(60, 68, 85), frgb(60, 68, 85), frgb(60, 68, 85), 0, 0, 0, 0, 0, nullptr}, // btn_frame
+        {frgb(240, 248, 255), frgb(220, 238, 255), frgb(200, 228, 255), frgb(180, 218, 255)}, // hover_grad
+        {frgb(0, 120, 215), frgb(0, 120, 215), frgb(0, 120, 215), frgb(255, 255, 255), frgb(255, 255, 255), frgb(255, 255, 255), 0, 0, nullptr}, // hover_frame
 
-            {frgb(60, 68, 85), frgb(60, 68, 85), frgb(60, 68, 85), frgb(60, 68, 85)}, // hover_grad
-            {frgb(255, 107, 0), frgb(255, 107, 0), frgb(255, 107, 0), 0, 0, 0, 0, 0, nullptr}, // hover_frame
+        {frgb(210, 210, 210), frgb(200, 200, 200), frgb(190, 190, 190), frgb(180, 180, 180)}, // down_grad
+        {frgb(150, 150, 150), frgb(150, 150, 150), frgb(150, 150, 150), 0, 0, 0, 0, 0, nullptr}, // down_frame
 
-            {frgb(27, 32, 45), frgb(27, 32, 45), frgb(27, 32, 45), frgb(27, 32, 45)}, // down_grad
-            {frgb(255, 107, 0), frgb(255, 107, 0), frgb(255, 107, 0), 0, 0, 0, 0, 0, nullptr}, // down_frame
+        {frgb(0, 140, 235), frgb(0, 120, 215), frgb(0, 100, 195), frgb(0, 80, 175)}, // def_btn_grad
+        {frgb(0, 60, 155), frgb(0, 60, 155), frgb(0, 60, 155), frgb(100, 180, 255), frgb(100, 180, 255), frgb(100, 180, 255), 0, 0, nullptr}, // def_btn_frame
 
-            {frgb(255, 107, 0), frgb(255, 107, 0), frgb(255, 107, 0), frgb(255, 107, 0)}, // def_btn_grad (primary)
-            {frgb(255, 107, 0), frgb(255, 107, 0), frgb(255, 107, 0), 0, 0, 0, 0, 0, nullptr}, // def_btn_frame
+        {frgb(180, 180, 180), frgb(180, 180, 180), frgb(180, 180, 180), 0, 0, 0, 0, 0, nullptr}, // thin_up_frame
+        {frgb(150, 150, 150), frgb(150, 150, 150), frgb(150, 150, 150), 0, 0, 0, 0, 0, nullptr}, // thin_down_frame
 
-            {frgb(60, 68, 85), frgb(60, 68, 85), frgb(60, 68, 85), 0, 0, 0, 0, 0, nullptr}, // thin_up_frame
-            {frgb(60, 68, 85), frgb(60, 68, 85), frgb(60, 68, 85), 0, 0, 0, 0, 0, nullptr}, // thin_down_frame
+        frgb(255, 255, 255),     // input_bg
+        {frgb(180, 180, 180), frgb(180, 180, 180), frgb(180, 180, 180), 0, 0, 0, 0, 0, nullptr}, // input_frame
 
-            frgb(27, 32, 45),     // input_bg
-            {frgb(60, 68, 85), frgb(60, 68, 85), frgb(60, 68, 85), 0, 0, 0, 0, 0, nullptr}, // input_frame
-
-            frgb(255, 107, 0),    // focus_ring
-            frgb(255, 255, 255),  // toggle_tick
-            frgb(60, 68, 85),     // toggle_border
-            frgb(255, 107, 0),    // slider_track
-            frgb(255, 255, 255)   // spinner_arrow
-        }; 
-    // GRADIENT_PALETTE
-    // constexpr ThemePalette DARK_PALETTE = {
-    //     frgb(240, 240, 240),  // bg_main: Surface/Base
-    //     frgb(255, 255, 255),  // bg_sec: Canvas/Shade
-    //     frgb(30, 30, 30),     // fg_main: Tint
-    //     frgb(150, 150, 150),  // inactive: Inactive/Border
-    //     frgb(0, 120, 215),    // selection: Primary Main
-    //     frgb(220, 50, 47),    // error_main: Error Main
-    //     frgb(42, 157, 143),   // success_main: Success Main
-    //     frgb(255, 255, 255),  // free_bg
-    //     frgb(255, 255, 220),  // tt_bg
-    //     frgb(0, 0, 0),        // tt_fg
-
-    //     {frgb(252, 252, 252), frgb(245, 245, 245), frgb(235, 235, 235), frgb(225, 225, 225)}, // btn_grad
-    //     {frgb(170, 170, 170), frgb(170, 170, 170), frgb(170, 170, 170), frgb(255, 255, 255), frgb(255, 255, 255), frgb(255, 255, 255), 0, 0, nullptr}, // btn_frame
-
-    //     {frgb(240, 248, 255), frgb(220, 238, 255), frgb(200, 228, 255), frgb(180, 218, 255)}, // hover_grad
-    //     {frgb(0, 120, 215), frgb(0, 120, 215), frgb(0, 120, 215), frgb(255, 255, 255), frgb(255, 255, 255), frgb(255, 255, 255), 0, 0, nullptr}, // hover_frame
-
-    //     {frgb(210, 210, 210), frgb(200, 200, 200), frgb(190, 190, 190), frgb(180, 180, 180)}, // down_grad
-    //     {frgb(150, 150, 150), frgb(150, 150, 150), frgb(150, 150, 150), 0, 0, 0, 0, 0, nullptr}, // down_frame
-
-    //     {frgb(0, 140, 235), frgb(0, 120, 215), frgb(0, 100, 195), frgb(0, 80, 175)}, // def_btn_grad
-    //     {frgb(0, 60, 155), frgb(0, 60, 155), frgb(0, 60, 155), frgb(100, 180, 255), frgb(100, 180, 255), frgb(100, 180, 255), 0, 0, nullptr}, // def_btn_frame
-
-    //     {frgb(180, 180, 180), frgb(180, 180, 180), frgb(180, 180, 180), 0, 0, 0, 0, 0, nullptr}, // thin_up_frame
-    //     {frgb(150, 150, 150), frgb(150, 150, 150), frgb(150, 150, 150), 0, 0, 0, 0, 0, nullptr}, // thin_down_frame
-
-    //     frgb(255, 255, 255),     // input_bg
-    //     {frgb(180, 180, 180), frgb(180, 180, 180), frgb(180, 180, 180), 0, 0, 0, 0, 0, nullptr}, // input_frame
-
-    //     frgb(0, 120, 215),    // focus_ring
-    //     frgb(30, 30, 30),     // toggle_tick
-    //     frgb(150, 150, 150),  // toggle_border
-    //     frgb(0, 120, 215),    // slider_track
-    //     frgb(30, 30, 30)      // spinner_arrow
-    // };
+        frgb(0, 120, 215),    // focus_ring
+        frgb(30, 30, 30),     // toggle_tick
+        frgb(150, 150, 150),  // toggle_border
+        frgb(0, 120, 215),    // slider_track
+        frgb(30, 30, 30)      // spinner_arrow
+    };
     // FUTURISTIC_DARK_PALETTE
     /* constexpr ThemePalette DARK_PALETTE = {
         frgb(20, 20, 35),    // bg_main: Surface/Base

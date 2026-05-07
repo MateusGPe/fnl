@@ -67,30 +67,16 @@ namespace mui
 
             int cx, cy;
 
-            if (is_horiz)
-            {
-                cx = slider_x + static_cast<int>(val * slider_w);
-                cy = s_y + s_h / 2;
-
-                core::draw_slider_track_split(
-                    slider_x, cx, slider_x + slider_w, cy,
-                    track_thickness,
-                    active_r() ? palette.selection : fl_inactive(palette.selection),
-                    palette.inactive, // Force empty side of track to look disabled
-                    true);
-            }
-            else
-            {
-                cx = s_x + s_w / 2;
-                cy = slider_y + static_cast<int>((1.0 - val) * slider_h);
-
-                core::draw_slider_track_split(
-                    slider_y, cy, slider_y + slider_h, cx,
-                    track_thickness,
-                    active_r() ? palette.selection : fl_inactive(palette.selection),
-                    palette.inactive, // Force empty side of track to look disabled
-                    false);
-            }
+            core::calculate_slider_thumb_position_and_draw_track(
+                s_x, s_y, s_w, s_h,
+                slider_x, slider_y, slider_w, slider_h,
+                val,
+                is_horiz,
+                track_thickness,
+                active_r() ? palette.selection : fl_inactive(palette.selection),
+                palette.inactive,
+                cx, cy
+            );
 
             if (active_r())
             {

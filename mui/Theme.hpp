@@ -71,7 +71,7 @@ namespace mui
             Fl_Tooltip::textcolor(palette.tt_fg);
             Fl::redraw();
         }
-        
+
         static void set_palette(const ThemePalette &palette)
         {
             apply_theme(palette);
@@ -111,27 +111,27 @@ namespace mui
             bool active = Fl::draw_box_active();
             int radius = ThemeManager::get_palette().metrics.radius;
             fl_color(core::activated_color(c, active));
-            
+
             if (radius > 0)
-                fl_rounded_rectf(x + 2, y + 2, w - 4, h - 4, radius);
+                fl_rounded_rectf(x, y, w, h, radius);
             else
-                fl_rectf(x + 2, y + 2, w - 4, h - 4);
-                
+                fl_rectf(x, y, w, h);
+
             engine::draw_static_frame(x, y, w, h, ThemeManager::get_palette().*FramePtr, active, ThemeManager::get_palette());
         }
-        
+
         template <auto FramePtr>
         inline void tpl_thin_down_box(int x, int y, int w, int h, Fl_Color c)
         {
             bool active = Fl::draw_box_active();
             int radius = ThemeManager::get_palette().metrics.radius;
             fl_color(core::activated_color(c, active));
-            
+
             if (radius > 0)
-                fl_rounded_rectf(x + 1, y + 1, w - 2, h - 2, radius);
+                fl_rounded_rectf(x, y, w, h, radius);
             else
-                fl_rectf(x + 1, y + 1, w - 2, h - 2);
-                
+                fl_rectf(x, y, w, h);
+
             engine::draw_static_frame(x, y, w, h, ThemeManager::get_palette().*FramePtr, active, ThemeManager::get_palette());
         }
 
@@ -153,11 +153,11 @@ namespace mui
         inline void radio_round_down_box(int x, int y, int w, int h, Fl_Color c)
         {
             fl_color(core::activated_color(c, Fl::draw_box_active()));
-            fl_pie(x + 1, y + 1, w - 2, h - 2, 0.0, 360.0);
+            fl_pie(x, y, w, h, 0.0, 360.0);
             fl_color(core::activated_color(ThemeManager::get_palette().input_frame.out_top, Fl::draw_box_active()));
             fl_arc(x, y, w, h, 0.0, 360.0);
         }
-        
+
         inline void dispatch_button(int x, int y, int w, int h, const WidgetState &state) { draw_button(x, y, w, h, state, ThemeManager::get_palette()); }
         inline void dispatch_choice(int x, int y, int w, int h, const WidgetState &state, bool is_pressed) { draw_choice(x, y, w, h, state, is_pressed, ThemeManager::get_palette()); }
     }
@@ -168,7 +168,7 @@ namespace mui
             return;
 
         Fl::scheme("gtk+");
-        
+
         // Blanketing core box types mapped to standard offsets.
         Fl::set_boxtype(FL_GTK_UP_BOX, engine::tpl_box<&ThemePalette::btn_grad, &ThemePalette::btn_frame>, 2, 2, 4, 4);
         Fl::set_boxtype(FL_GTK_UP_FRAME, engine::tpl_frame<&ThemePalette::btn_frame>, 2, 2, 4, 4);
@@ -210,7 +210,7 @@ namespace mui
         Fl::set_boxtype(Theme::schemes::ROUNDED_PANEL_THIN_UP_FRAME, engine::tpl_static_frame<&ThemePalette::thin_up_frame>, 1, 1, 2, 2);
         Fl::set_boxtype(Theme::schemes::BUTTON_DOWN_BOX, engine::tpl_box<&ThemePalette::down_grad, &ThemePalette::down_frame>, 2, 2, 4, 4);
         Fl::set_boxtype(Theme::schemes::MENU_POPUP_BOX, engine::tpl_flat_box<&ThemePalette::btn_frame>, 1, 1, 2, 2);
-        
+
         Fl::set_boxtype(Theme::schemes::BG_BOX, FL_FLAT_BOX);
         Fl::set_boxtype(Theme::schemes::BG_DOWN_BOX, Theme::schemes::BG_BOX);
         Fl::set_boxtype(Theme::schemes::TOOLBAR_FRAME, engine::tpl_static_frame<&ThemePalette::thin_up_frame>, 1, 1, 2, 2);

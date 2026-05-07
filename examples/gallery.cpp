@@ -21,7 +21,6 @@
 #include <FL/Fl_Output.H>
 #include <FL/Fl_Value_Output.H>
 #include <FL/Fl_Multiline_Output.H>
-#include <FL/Fl_Browser.H>
 #include <FL/Fl_Text_Editor.H>
 #include <FL/Fl_Help_View.H>
 #include <FL/Fl_Chart.H>
@@ -175,7 +174,7 @@ public:
                 mui::Button *btn = new mui::Button(20, sy, 80, 30, "Button");
                 btn->callback(on_generic_click, this);
 
-                Fl_Return_Button *rbtn = new Fl_Return_Button(110, sy, 80, 30, "Return");
+                mui::ReturnButton *rbtn = new mui::ReturnButton(110, sy, 80, 30, "Return");
                 rbtn->callback(on_generic_click, this);
 
                 mui::LightButton *lbtn = new mui::LightButton(200, sy, 80, 30, "Light");
@@ -215,7 +214,7 @@ public:
                 b3->align(FL_ALIGN_LEFT | FL_ALIGN_INSIDE);
                 sy += 30;
 
-                mui::Slider *sl = new mui::Slider(20, sy, 200, 30, "Slider");
+                mui::Slider *sl = new mui::Slider(20, sy, 200, 30);
                 sl->type(FL_HOR_SLIDER);
                 sl->bounds(0, 100);
                 sl->value(50);
@@ -304,7 +303,7 @@ public:
                 mout->value("Line 1\nLine 2\nLine 3");
                 sy += 80;
 
-                Fl_Browser *br = new Fl_Browser(20, sy, 150, 150);
+                mui::Browser *br = new mui::Browser(20, sy, 150, 150);
                 br->type(FL_MULTI_BROWSER);
                 br->add("Item 1");
                 br->add("Item 2");
