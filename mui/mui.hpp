@@ -17,3 +17,6 @@
 #include "Slider.hpp"
 #include "Spinner.hpp"
 #include "ValueSlider.hpp"
+#include "Tree.hpp"
+#include "Tabs.hpp"
+#include "Progress.hpp"

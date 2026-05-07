@@ -6,7 +6,6 @@
 #include <FL/Fl_Tooltip.H>
 #include <string>
 #include <vector>
-#include <unordered_map>
 #include <cstdio>
 #include <memory>
 
@@ -39,27 +38,9 @@ namespace mui
     class ThemeManager
     {
     private:
-        static inline const ThemePalette *current_palette_ = &AERO_PALETTE;
-        static inline std::unique_ptr<engine::IThemeRenderer> renderer_ = std::make_unique<engine::BeveledRenderer>();
+        static inline const ThemePalette *current_palette_ = &DARK_PALETTE;
+        static inline std::unique_ptr<engine::IThemeRenderer> renderer_ = std::make_unique<engine::SolidRenderer>();
         static inline bool boxes_registered_ = false;
-
-        static std::unique_ptr<engine::IThemeRenderer> create_renderer(BoxStyle style)
-        {
-            switch (style)
-            {
-            case BoxStyle::Classic:
-                return std::make_unique<engine::ClassicRenderer>();
-            case BoxStyle::WinXP:
-                return std::make_unique<engine::WinXPRenderer>();
-            case BoxStyle::Solid:
-                return std::make_unique<engine::SolidRenderer>();
-            case BoxStyle::RoundedArcs:
-                return std::make_unique<engine::RoundedArcsRenderer>();
-            case BoxStyle::Beveled:
-            default:
-                return std::make_unique<engine::BeveledRenderer>();
-            }
-        }
 
     public:
         ThemeManager() = delete;
@@ -69,22 +50,13 @@ namespace mui
 
         static void register_boxtypes();
 
-        static void apply_theme(const ThemePalette &palette)
+        static void apply_theme()
         {
-            current_palette_ = &palette;
-            renderer_ = create_renderer(palette.style);
-
             register_boxtypes();
 
-            // Set global FLTK settings based on palette
-            if (palette.type == ThemeType::WinXP || palette.type == ThemeType::Classic)
-            {
-                Fl::scrollbar_size(17);
-            }
-            else
-            {
-                Fl::scrollbar_size(15);
-            }
+            Fl::scrollbar_size(15);
+
+            const ThemePalette &palette = *current_palette_;
 
             unsigned char bg_r = (palette.bg_main >> 24) & 0xFF, bg_g = (palette.bg_main >> 16) & 0xFF, bg_b = (palette.bg_main >> 8) & 0xFF;
             unsigned char bg2_r = (palette.bg_sec >> 24) & 0xFF, bg2_g = (palette.bg_sec >> 16) & 0xFF, bg2_b = (palette.bg_sec >> 8) & 0xFF;
@@ -211,16 +183,7 @@ namespace mui
 
         // Component Dispatchers (To not break existing FLTK widget codes relying on engine::dispatch...)
         inline void dispatch_button(int x, int y, int w, int h, const WidgetState &state) { ThemeManager::get_renderer().draw_button(x, y, w, h, state, ThemeManager::get_palette()); }
-        inline void dispatch_checkbox(int x, int y, int w, int h, const WidgetState &state) { ThemeManager::get_renderer().draw_checkbox(x, y, w < h ? w : h, state, ThemeManager::get_palette()); }
-        inline void dispatch_radio_button(int x, int y, int w, int h, const WidgetState &state) { ThemeManager::get_renderer().draw_radio_button(x, y, w < h ? w : h, state, ThemeManager::get_palette()); }
-        inline void dispatch_slider(int x, int y, int w, int h, const WidgetState &state) { ThemeManager::get_renderer().draw_slider(x, y, w, h, state, ThemeManager::get_palette()); }
-        inline void dispatch_spinner(int x, int y, int w, int h, const WidgetState &state) { ThemeManager::get_renderer().draw_spinner(x, y, w, h, state, ThemeManager::get_palette()); }
         inline void dispatch_choice(int x, int y, int w, int h, const WidgetState &state, bool is_pressed) { ThemeManager::get_renderer().draw_choice(x, y, w, h, state, is_pressed, ThemeManager::get_palette()); }
-        inline void dispatch_tabs(int x, int y, int w, int h, const WidgetState &state) { ThemeManager::get_renderer().draw_tabs(x, y, w, h, state, ThemeManager::get_palette()); }
-        inline void dispatch_tab_item(int x, int y, int w, int h, const WidgetState &state) { ThemeManager::get_renderer().draw_tab_item(x, y, w, h, state, ThemeManager::get_palette()); }
-        inline void dispatch_progress(int x, int y, int w, int h, const WidgetState &state) { ThemeManager::get_renderer().draw_progress(x, y, w, h, state, ThemeManager::get_palette()); }
-        inline void dispatch_toggle(int x, int y, int w, int h, const WidgetState &state) { ThemeManager::get_renderer().draw_toggle(x, y, w, h, state, ThemeManager::get_palette()); }
-        inline void dispatch_input(int x, int y, int w, int h, const WidgetState &state) { ThemeManager::get_renderer().draw_input(x, y, w, h, state, ThemeManager::get_palette()); }
     }
 
     // Must be declared after bridges are defined so FLTK functions exist to hook to
@@ -283,9 +246,6 @@ namespace mui
         boxes_registered_ = true;
     }
 
-    // ---------------------------------------------------------
-    // Legacy `Theme::` Namespace for backwards compatibility
-    // ---------------------------------------------------------
     namespace Theme
     {
         static void apply_global_settings()
@@ -294,104 +254,34 @@ namespace mui
             fl_contrast_level(45);
         }
 
-        static void apply(ThemeType typ)
+        static void apply()
         {
             const char *font_regular, *font_bold, *font_italic, *font_bold_italic;
-            if (typ == ThemeType::WinXP || typ == ThemeType::Classic)
-            {
-                font_regular = "Tahoma";
-                font_bold = "Tahoma Bold";
-                font_italic = "Tahoma Italic";
-                font_bold_italic = "Tahoma Bold Italic";
-            }
-            else
-            {
+
 #if defined(_WIN32)
-                font_regular = "Segoe UI";
-                font_bold = "Segoe UI Bold";
-                font_italic = "Segoe UI Italic";
-                font_bold_italic = "Segoe UI Bold Italic";
+            font_regular = "Segoe UI";
+            font_bold = "Segoe UI Bold";
+            font_italic = "Segoe UI Italic";
+            font_bold_italic = "Segoe UI Bold Italic";
 #elif defined(__APPLE__)
-                font_regular = "Helvetica Neue";
-                font_bold = "Helvetica Neue Bold";
-                font_italic = "Helvetica Neue Italic";
-                font_bold_italic = "Helvetica Neue Bold Italic";
+            font_regular = "Helvetica Neue";
+            font_bold = "Helvetica Neue Bold";
+            font_italic = "Helvetica Neue Italic";
+            font_bold_italic = "Helvetica Neue Bold Italic";
 #else
-                font_regular = "Noto Sans";
-                font_bold = "Noto Sans Bold";
-                font_italic = "Noto Sans Italic";
-                font_bold_italic = "Noto Sans Bold Italic";
+            font_regular = "Noto Sans";
+            font_bold = "Noto Sans Bold";
+            font_italic = "Noto Sans Italic";
+            font_bold_italic = "Noto Sans Bold Italic";
 #endif
-            }
+
             Fl::set_font(FL_HELVETICA, font_regular);
             Fl::set_font(FL_HELVETICA_BOLD, font_bold);
             Fl::set_font(FL_HELVETICA_ITALIC, font_italic);
             Fl::set_font(FL_HELVETICA_BOLD_ITALIC, font_bold_italic);
 
-            switch (typ)
-            {
-            case ThemeType::Aero:
-                ThemeManager::apply_theme(AERO_PALETTE);
-                break;
-            case ThemeType::Blue:
-                ThemeManager::apply_theme(BLUE_PALETTE);
-                break;
-            case ThemeType::Dark:
-                ThemeManager::apply_theme(DARK_PALETTE);
-                break;
-            case ThemeType::Metro:
-                ThemeManager::apply_theme(METRO_PALETTE);
-                break;
-            case ThemeType::Greybird:
-                ThemeManager::apply_theme(GREYBIRD_PALETTE);
-                break;
-            case ThemeType::AquaClassic:
-                ThemeManager::apply_theme(AQUA_CLASSIC_PALETTE);
-                break;
-            case ThemeType::Classic:
-                ThemeManager::apply_theme(CLASSIC_PALETTE);
-                break;
-            case ThemeType::Win10:
-                ThemeManager::apply_theme(WIN10_PALETTE);
-                break;
-            case ThemeType::WinXP:
-                ThemeManager::apply_theme(WINXP_PALETTE);
-                break;
-            case ThemeType::Flat:
-                ThemeManager::apply_theme(FLAT_PALETTE);
-                break;
-            case ThemeType::Material:
-                ThemeManager::apply_theme(MATERIAL_PALETTE);
-                break;
-            }
+            ThemeManager::apply_theme();
             apply_global_settings();
-        }
-
-        namespace registry
-        {
-            inline std::unordered_map<std::string, ThemeType> available_themes = {
-                {"Classic", ThemeType::Classic}, {"Aero", ThemeType::Aero}, {"Metro", ThemeType::Metro}, {"AquaClassic", ThemeType::AquaClassic}, {"Greybird", ThemeType::Greybird}, {"Blue", ThemeType::Blue}, {"Dark", ThemeType::Dark}, {"Win10", ThemeType::Win10}, {"WinXP", ThemeType::WinXP}, {"Flat", ThemeType::Flat}, {"Material", ThemeType::Material}};
-
-            inline std::vector<std::string> list_themes()
-            {
-                std::vector<std::string> names;
-                names.reserve(available_themes.size());
-                for (const auto &[name, _] : available_themes)
-                    names.push_back(name);
-                return names;
-            }
-
-            inline bool load_by_name(const std::string &name)
-            {
-                auto it = available_themes.find(name);
-                if (it == available_themes.end())
-                {
-                    apply(ThemeType::Aero);
-                    return false;
-                }
-                apply(it->second);
-                return true;
-            }
         }
     }
 }

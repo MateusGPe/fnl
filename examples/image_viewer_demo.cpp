@@ -5,10 +5,7 @@
 #include <mui.hpp>
 #include <FL/Fl_Menu_Bar.H>
 #include <FL/Fl_Box.H>
-#include <FL/Fl_Slider.H>
-#include <FL/Fl_Spinner.H>
 #include <FL/Fl_Output.H>
-#include <FL/Fl_Value_Slider.H>
 
 class ImageViewerApp;
 class LayerBrowser : public Fl_Browser
@@ -34,14 +31,14 @@ private:
     Fl_Output *m_status_coords_handle = nullptr;
     Fl_Output *m_status_color_handle = nullptr;
     mui::Choice *m_tool_choice_handle = nullptr;
-    Fl_Slider *m_opacity_slider_handle = nullptr;
+    mui::Slider *m_opacity_slider_handle = nullptr;
     mui::Choice *m_blend_mode_choice_handle = nullptr;
     mui::LightButton *m_minimap_btn_handle = nullptr;
-    Fl_Value_Slider *m_rot_slider_handle = nullptr;
-    Fl_Value_Slider *m_grid_size_slider_handle = nullptr;
+    mui::ValueSlider *m_rot_slider_handle = nullptr;
+    mui::ValueSlider *m_grid_size_slider_handle = nullptr;
     mui::Choice *m_canvas_mode_choice_handle = nullptr;
-    Fl_Spinner *m_canvas_w_spinner_handle = nullptr;
-    Fl_Spinner *m_canvas_h_spinner_handle = nullptr;
+    mui::Spinner *m_canvas_w_spinner_handle = nullptr;
+    mui::Spinner *m_canvas_h_spinner_handle = nullptr;
 
     bool m_use_solid_bg = false;
     Fl_Color m_solid_bg_color = FL_WHITE;
@@ -122,7 +119,6 @@ public:
 
     void on_change_theme(const char *theme_name)
     {
-        mui::Theme::registry::load_by_name(theme_name);
     }
 
     void on_tool_changed()
@@ -467,10 +463,12 @@ public:
         menu_bar->add("View/Toggle Minimap", FL_CTRL + 'm', [](Fl_Widget *, void *v)
                       { static_cast<ImageViewerApp *>(v)->on_toggle_minimap(); }, this);
 
-        auto theme_cb = [](Fl_Widget *w, void *v) {
+        auto theme_cb = [](Fl_Widget *w, void *v)
+        {
             Fl_Menu_Bar *bar = static_cast<Fl_Menu_Bar *>(w);
             const Fl_Menu_Item *m = bar->mvalue();
-            if (m && m->label()) {
+            if (m && m->label())
+            {
                 static_cast<ImageViewerApp *>(v)->on_change_theme(m->label());
             }
         };
@@ -530,7 +528,7 @@ public:
 
         Fl_Box *grid_size_lbl = new Fl_Box(sx + 105, sy, 40, 25, "Size:");
         grid_size_lbl->align(FL_ALIGN_RIGHT | FL_ALIGN_INSIDE);
-        m_grid_size_slider_handle = new Fl_Value_Slider(sx + 150, sy, sw - 150, 25);
+        m_grid_size_slider_handle = new mui::ValueSlider(sx + 150, sy, sw - 150, 25);
         m_grid_size_slider_handle->type(FL_HOR_SLIDER);
         m_grid_size_slider_handle->bounds(10, 100);
         m_grid_size_slider_handle->step(5);
@@ -550,7 +548,7 @@ public:
 
         Fl_Box *canvas_size_lbl = new Fl_Box(sx, sy, 60, 25, "Size:");
         canvas_size_lbl->align(FL_ALIGN_RIGHT | FL_ALIGN_INSIDE);
-        m_canvas_w_spinner_handle = new Fl_Spinner(sx + 65, sy, 70, 25);
+        m_canvas_w_spinner_handle = new mui::Spinner(sx + 65, sy, 70, 25);
         m_canvas_w_spinner_handle->type(FL_INT_INPUT);
         m_canvas_w_spinner_handle->minimum(10);
         m_canvas_w_spinner_handle->maximum(4000);
@@ -559,7 +557,7 @@ public:
         m_canvas_w_spinner_handle->callback([](Fl_Widget *, void *v)
                                             { static_cast<ImageViewerApp *>(v)->on_canvas_size_changed(); }, this);
 
-        m_canvas_h_spinner_handle = new Fl_Spinner(sx + 140, sy, 70, 25);
+        m_canvas_h_spinner_handle = new mui::Spinner(sx + 140, sy, 70, 25);
         m_canvas_h_spinner_handle->type(FL_INT_INPUT);
         m_canvas_h_spinner_handle->minimum(10);
         m_canvas_h_spinner_handle->maximum(4000);
@@ -606,7 +604,7 @@ public:
         m_blend_mode_choice_handle->callback([](Fl_Widget *, void *v)
                                              { static_cast<ImageViewerApp *>(v)->on_blend_mode_changed(); }, this);
 
-        m_opacity_slider_handle = new Fl_Slider(sx + 125, sy, sw - 125, 25);
+        m_opacity_slider_handle = new mui::Slider(sx + 125, sy, sw - 125, 25);
         m_opacity_slider_handle->type(FL_HOR_SLIDER);
         m_opacity_slider_handle->bounds(0, 100);
         m_opacity_slider_handle->step(1);
@@ -628,7 +626,7 @@ public:
 
         Fl_Box *rot_lbl = new Fl_Box(sx, sy, 60, 25, "Rotate:");
         rot_lbl->align(FL_ALIGN_RIGHT | FL_ALIGN_INSIDE);
-        m_rot_slider_handle = new Fl_Value_Slider(sx + 65, sy, sw - 65, 25);
+        m_rot_slider_handle = new mui::ValueSlider(sx + 65, sy, sw - 65, 25);
         m_rot_slider_handle->type(FL_HOR_SLIDER);
         m_rot_slider_handle->bounds(-180, 180);
         m_rot_slider_handle->step(1);
@@ -692,7 +690,7 @@ int LayerBrowser::handle(int event)
 int main()
 {
     mui::System::init_threads();
-    mui::Theme::apply(mui::ThemeType::Greybird);
+    mui::Theme::apply();
 
     ImageViewerApp app;
     return app.run();

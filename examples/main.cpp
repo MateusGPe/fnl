@@ -12,7 +12,7 @@ int main()
 
     // Apply a theme. MUI comes with several built-in themes.
     // You can try others like: Dark, Metro, Greybird, Blue, etc.
-    mui::Theme::apply(mui::ThemeType::Win10);
+    mui::Theme::apply();
 
     // Create the main window.
     // Fl_Window is a styled wrapper around Fl_Window.

@@ -6,7 +6,7 @@
 
 namespace mui
 {
-    class Choice : public policy::ChoiceDraw<policy::HoverTracker<policy::CallbackRouter<Fl_Menu_>>>
+    class Choice : public policy::HoverTracker<policy::CallbackRouter<Fl_Menu_>>
     {
     protected:
         Fl_Color btn_color;
@@ -14,6 +14,37 @@ namespace mui
         Fl_Color btn_pressed_color;
         Fl_Boxtype btn_box;
         Fl_Boxtype btn_down_box;
+        bool is_pressed = false;
+
+        void draw() override
+        {
+            fl_push_clip(x(), y(), w(), h());
+
+            Fl_Boxtype draw_b = is_pressed ? btn_down_box : btn_box;
+            Fl_Color draw_c = is_pressed ? btn_pressed_color : btn_color;
+
+            if (!is_pressed && is_hovered && active_r())
+            {
+                Fl_Boxtype hover_b = this->resolve_hover_box(btn_box);
+                if (hover_b != btn_box) draw_b = hover_b;
+                else draw_c = btn_hover_color;
+            }
+
+            fl_draw_box(draw_b, x(), y(), w(), h(), draw_c);
+
+            fl_color(active_r() ? textcolor() : fl_inactive(textcolor()));
+            fl_font(textfont(), textsize());
+            
+            if (const Fl_Menu_Item* m = mvalue()) {
+                fl_draw(m->text, x() + 6, y(), w() - 24, h(), FL_ALIGN_LEFT | FL_ALIGN_INSIDE);
+            }
+
+            int arrow_x = x() + w() - 14;
+            int arrow_y = y() + (h() - 6) / 2;
+            fl_polygon(arrow_x, arrow_y, arrow_x + 8, arrow_y, arrow_x + 4, arrow_y + 6);
+
+            fl_pop_clip();
+        }
 
         int handle(int event) override
         {
@@ -45,6 +76,7 @@ namespace mui
                 if (Fl::visible_focus())
                     Fl::focus(this);
 
+                is_pressed = true;
                 redraw();
 
                 Fl_Menu_::handle(FL_BEFORE_MENU);
@@ -54,6 +86,7 @@ namespace mui
                 if (wp.deleted())
                     return 1;
 
+                is_pressed = false;
                 this->is_hovered = Fl::event_inside(this);
                 redraw();
                 if (v && !v->submenu())
@@ -73,7 +106,7 @@ namespace mui
         }
 
     public:
-        Choice(int x, int y, int w, int h, const char *l = nullptr) : policy::ChoiceDraw<policy::HoverTracker<policy::CallbackRouter<Fl_Menu_>>>(x, y, w, h, l)
+        Choice(int x, int y, int w, int h, const char *l = nullptr) : policy::HoverTracker<policy::CallbackRouter<Fl_Menu_>>(x, y, w, h, l)
         {
             this->color(mui::ThemeManager::get_palette().bg_main);
             this->textcolor(mui::ThemeManager::get_palette().fg_main);
@@ -95,7 +128,8 @@ namespace mui
         template <typename T, void (T::*Method)()>
         Choice &on_select(T *instance)
         {
-            return on_trigger<T, Method>(instance);
+            this->template bind_callback<T, Method>(instance);
+            return *this;
         }
         const char *text() const
         {

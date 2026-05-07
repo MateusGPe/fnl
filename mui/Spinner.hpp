@@ -5,6 +5,13 @@
 #include <FL/Fl_Input.H>
 #include <FL/Fl_Button.H>
 #include <utility>
+// Spinner.hpp
+#pragma once
+#include "Policies.hpp"
+#include <FL/Fl_Spinner.H>
+#include <FL/Fl_Input.H>
+#include <FL/Fl_Repeat_Button.H>
+#include <utility>
 
 namespace mui
 {
@@ -13,77 +20,67 @@ namespace mui
     protected:
         void draw() override
         {
-            if (damage()) 
-                draw_box();
-            
-            fl_push_clip(x(), y(), w(), h());
-
-            // Determine if the group or its children have focus
-            bool is_focused = (Fl::focus() == this || contains(Fl::focus()));
-            engine::WidgetState state{active_r() != 0, is_hovered, is_focused, 0.0};
-            
-            // Dispatch the background and outer styling
-            engine::dispatch_spinner(x(), y(), w(), h(), state);
-
-            // Supress default FLTK child drawing artifacts
-            if (children() >= 3)
-            {
-                Fl_Widget* inp = child(0);
-                inp->box(FL_NO_BOX);
-                inp->color(FL_FREE_COLOR); // Prevent input background overdraw
-                
-                Fl_Widget* up_btn = child(1);
-                up_btn->box(FL_NO_BOX);
-                up_btn->clear_visible_focus();
-                
-                Fl_Widget* dn_btn = child(2);
-                dn_btn->box(FL_NO_BOX);
-                dn_btn->clear_visible_focus();
+            // 1. Only draw the custom parent box if the parent itself is damaged.
+            // If only a child (like the text input) is damaged, skip the full background redraw.
+            if (damage() & ~FL_DAMAGE_CHILD) {
+                fl_draw_box(Theme::schemes::ROUNDED_BUTTON_UP_BOX, x(), y(), w(), h(), color());
             }
 
-            // Draw the text and invisible interaction targets
-            draw_children();
+            // 2. Draw the children natively WITHOUT overriding the clip region.
+            Fl_Spinner::draw();
+
+            // 3. Overlay the custom arrows
+            const auto &palette = mui::ThemeManager::get_palette();
             
-            fl_pop_clip();
+            {
+                int cx = up_button_.x() + up_button_.w() / 2;
+                int cy = up_button_.y() + up_button_.h() / 2;
+                Fl_Color c = active_r() ? palette.spinner_arrow : fl_inactive(palette.spinner_arrow);
+                core::draw_spinner_arrow(cx, cy, palette.metrics.spinner_arrow_size, true, c);
+            }
+            {
+                int cx = down_button_.x() + down_button_.w() / 2;
+                int cy = down_button_.y() + down_button_.h() / 2;
+                Fl_Color c = active_r() ? palette.spinner_arrow : fl_inactive(palette.spinner_arrow);
+                core::draw_spinner_arrow(cx, cy, palette.metrics.spinner_arrow_size, false, c);
+            }
         }
 
     public:
-        template <typename... Args>
-        Spinner(int x, int y, int w, int h, const char *l = nullptr, Args &&...args)
-            : policy::HoverTracker<policy::CallbackRouter<Fl_Spinner>>(x, y, w, h, l, std::forward<Args>(args)...)
+        Spinner(int x, int y, int w, int h, const char *label = nullptr) 
+            : policy::HoverTracker<policy::CallbackRouter<Fl_Spinner>>(x, y, w, h, label)
         {
-            align(FL_ALIGN_CENTER);
-            box(FL_NO_BOX);
-            color(mui::ThemeManager::get_palette().bg_main);
+            // The parent needs no box, as we handle its rounded box manually in draw()
+            box(Theme::schemes::ROUNDED_BUTTON_UP_BOX); 
+            color(mui::ThemeManager::get_palette().input_bg);
             selection_color(mui::ThemeManager::get_palette().selection);
-            labelcolor(mui::ThemeManager::get_palette().fg_main);
+
+            input_.box(FL_FLAT_BOX);
+            input_.color(mui::ThemeManager::get_palette().input_bg);
+            input_.selection_color(mui::ThemeManager::get_palette().selection);
+
+            up_button_.box(FL_FLAT_BOX);
+            down_button_.box(FL_FLAT_BOX);
             
-            if (children() >= 3)
-            {
-                // Synchronize child text styling
-                Fl_Input *inp = static_cast<Fl_Input *>(child(0));
-                inp->textcolor(mui::ThemeManager::get_palette().fg_main);
-                inp->cursor_color(mui::ThemeManager::get_palette().selection);
-                
-                // Erase default FLTK arrows to allow dispatch_spinner to draw them
-                child(1)->label("");
-                child(2)->label("");
-            }
+            up_button_.color(mui::ThemeManager::get_palette().input_bg);
+            down_button_.color(mui::ThemeManager::get_palette().input_bg);
+
+            up_button_.label("");
+            down_button_.label("");
+            resize(x, y, w, h);
         }
-        
-        // Ensure manual textcolor changes propagate to the wrapped Fl_Input
-        void textcolor(Fl_Color c) 
+        void resize(int X, int Y, int W, int H)
         {
-            Fl_Spinner::textcolor(c);
-            if (children() >= 1) 
-            {
-                static_cast<Fl_Input *>(child(0))->textcolor(c);
-            }
-        }
-        
-        Fl_Color textcolor() const
-        {
-            return Fl_Spinner::textcolor();
+            Fl_Group::resize(X, Y, W, H);
+            int wpad = 4, hpad = 2;
+            X += wpad;
+            Y += hpad;
+            W -= wpad << 1;
+            H -= hpad << 1;
+            input_.resize(X, Y, W - H / 2 - 2, H);
+            up_button_.resize(X + W - H / 2 - 2, Y, H / 2 + 2, H / 2);
+            down_button_.resize(X + W - H / 2 - 2, Y + H - H / 2,
+                                H / 2 + 2, H / 2);
         }
     };
 }
