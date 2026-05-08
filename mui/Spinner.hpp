@@ -12,6 +12,17 @@ namespace mui
     protected:
         void draw() override
         {
+            const auto &palette = mui::ThemeManager::get_palette();
+            // Dynamically update colors to reflect current theme
+            color(palette.input_bg);
+            selection_color(palette.selection);
+            labelcolor(palette.fg_main);
+            input_.color(palette.input_bg);
+            input_.selection_color(palette.selection);
+            input_.textcolor(palette.fg_main);
+            up_button_.color(palette.input_bg);
+            down_button_.color(palette.input_bg);
+
             if (damage() & ~FL_DAMAGE_CHILD)
             {
                 fl_draw_box(Theme::schemes::ROUNDED_INPUT_THIN_DOWN_BOX, x(), y(), w(), h(), color());
@@ -19,16 +30,14 @@ namespace mui
 
             Fl_Spinner::draw();
 
-            const auto &palette = mui::ThemeManager::get_palette();
-
             int cx = up_button_.x() + up_button_.w() / 2;
             int cy = up_button_.y() + up_button_.h() / 2;
-            Fl_Color c = up_button_.value() ? palette.selection : palette.spinner_arrow;
+            Fl_Color c = up_button_.value() ? palette.focus_ring : palette.spinner_arrow;
             core::draw_spinner_arrow(cx, cy, palette.metrics.spinner_arrow_size, true, active_r() ? c : fl_inactive(c));
 
             cx = down_button_.x() + down_button_.w() / 2;
             cy = down_button_.y() + down_button_.h() / 2;
-            c = down_button_.value() ? palette.selection : palette.spinner_arrow;
+            c = down_button_.value() ? palette.focus_ring : palette.spinner_arrow;
             core::draw_spinner_arrow(cx, cy, palette.metrics.spinner_arrow_size, false, active_r() ? c : fl_inactive(c));
         }
 
@@ -37,19 +46,9 @@ namespace mui
             : policy::HoverTracker<policy::CallbackRouter<Fl_Spinner>>(x, y, w, h, label)
         {
             box(FL_NO_BOX);
-            color(mui::ThemeManager::get_palette().input_bg);
-            selection_color(mui::ThemeManager::get_palette().selection);
-
             input_.box(FL_FLAT_BOX);
-            input_.color(mui::ThemeManager::get_palette().input_bg);
-            input_.selection_color(mui::ThemeManager::get_palette().selection);
-
             up_button_.box(FL_NO_BOX);
             down_button_.box(FL_NO_BOX);
-
-            up_button_.color(mui::ThemeManager::get_palette().input_bg);
-            down_button_.color(mui::ThemeManager::get_palette().input_bg);
-
             up_button_.label("");
             down_button_.label("");
             resize(x, y, w, h);

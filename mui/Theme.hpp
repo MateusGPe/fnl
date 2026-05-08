@@ -38,17 +38,17 @@ namespace mui
     class ThemeManager
     {
     private:
-        static inline const ThemePalette *current_palette_ = &DARK_PALETTE;
+        static inline ThemePalette *current_palette_ = &DARK_PALETTE;
         static inline bool boxes_registered_ = false;
 
     public:
         ThemeManager() = delete;
 
-        static const ThemePalette &get_palette() { return *current_palette_; }
+        static ThemePalette &get_palette() { return *current_palette_; }
 
         static void register_boxtypes();
 
-        static void apply_theme(const ThemePalette &palette)
+        static void apply_theme(ThemePalette &palette)
         {
             current_palette_ = &palette;
 
@@ -73,7 +73,11 @@ namespace mui
 
         static void set_palette(const ThemePalette &palette)
         {
-            apply_theme(palette);
+            // Copy the new palette's data into the currently active palette object.
+            *current_palette_ = palette;
+            // Now, call apply_theme with the (modified) active palette. This is safe
+            // and ensures all global FLTK theme settings are updated.
+            apply_theme(*current_palette_);
         }
     };
 

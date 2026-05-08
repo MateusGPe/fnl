@@ -57,8 +57,8 @@ namespace mui
                 {
                     this->down_box(Theme::schemes::BUTTON_DOWN_BOX);
                 }
-                this->color(mui::ThemeManager::get_palette().bg_main);
-                this->selection_color(mui::ThemeManager::get_palette().bg_sec);
+                // Widget colors (like background and selection) are now handled dynamically by FLTK's global theme settings
+                // (Fl::background, Fl::selection_color etc.) or explicitly in draw() methods.
             }
         };
 

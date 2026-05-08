@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <mui.hpp>
 #include <FL/Fl_Window.H>
+#include <mui/Theme/data.hpp>
 #include <FL/Fl_Group.H>
 #include <FL/Fl_Menu_Bar.H>
 #include <FL/Fl_Button.H>
@@ -109,6 +110,21 @@ public:
 
     static void on_theme_menu_select(Fl_Widget *w, void *v)
     {
+        auto *bar = static_cast<Fl_Menu_Bar *>(w);
+        const Fl_Menu_Item *item = bar->mvalue();
+        if (!item || !item->label())
+            return;
+
+        std::string path = item->label();
+        size_t last_slash = path.rfind('/');
+        std::string name = (last_slash != std::string::npos) ? path.substr(last_slash + 1) : path;
+
+        for (const auto &named_palette : mui::get_theme_palettes())
+        {
+            if (named_palette.name == name) {
+                mui::ThemeManager::set_palette(named_palette.palette);
+            }
+        }
     }
 
     static void on_file_chooser(Fl_Widget *, void *)
@@ -148,17 +164,19 @@ public:
         m_menu_bar_handle->add("File/Quit", 0, on_quit, this);
         m_menu_bar_handle->add("Help/About");
 
-        m_menu_bar_handle->add("Theme/Aero", 0, on_theme_menu_select, this, FL_MENU_RADIO);
-        m_menu_bar_handle->add("Theme/AquaClassic", 0, on_theme_menu_select, this, FL_MENU_RADIO);
-        m_menu_bar_handle->add("Theme/Blue", 0, on_theme_menu_select, this, FL_MENU_RADIO);
-        m_menu_bar_handle->add("Theme/Classic", 0, on_theme_menu_select, this, FL_MENU_RADIO);
-        m_menu_bar_handle->add("Theme/Dark", 0, on_theme_menu_select, this, FL_MENU_RADIO);
-        m_menu_bar_handle->add("Theme/Flat", 0, on_theme_menu_select, this, FL_MENU_RADIO);
-        m_menu_bar_handle->add("Theme/Greybird", 0, on_theme_menu_select, this, FL_MENU_RADIO);
-        m_menu_bar_handle->add("Theme/Material", 0, on_theme_menu_select, this, FL_MENU_RADIO);
-        m_menu_bar_handle->add("Theme/Metro", 0, on_theme_menu_select, this, FL_MENU_RADIO);
-        m_menu_bar_handle->add("Theme/Win10", 0, on_theme_menu_select, this, FL_MENU_RADIO | FL_MENU_VALUE);
-        m_menu_bar_handle->add("Theme/WinXP", 0, on_theme_menu_select, this, FL_MENU_RADIO);
+        m_menu_bar_handle->add("Theme", 0, 0, 0, FL_SUBMENU);
+        bool first = true;
+        for (const auto &named_palette : mui::get_theme_palettes())
+        {
+            std::string path = "Theme/" + named_palette.name;
+            int flags = FL_MENU_RADIO;
+            if (first)
+            {
+                flags |= FL_MENU_VALUE;
+                first = false;
+            }
+            m_menu_bar_handle->add(path.c_str(), 0, on_theme_menu_select, this, flags);
+        }
 
         mui::Tabs *tabs = new mui::Tabs(10, 40, 780, 550);
         {

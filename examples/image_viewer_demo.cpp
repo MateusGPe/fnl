@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <fstream>
 #include <mui.hpp>
+#include <mui/Theme/data.hpp>
 #include <FL/Fl_Menu_Bar.H>
 #include <FL/Fl_Box.H>
 #include <FL/Fl_Output.H>
@@ -136,6 +137,15 @@ void on_toggle_minimap()
 
 void on_change_theme(const char *theme_name)
 {
+    for (const auto &named_palette : mui::get_theme_palettes())
+    {
+        if (named_palette.name == theme_name)
+        {
+            // Use the corrected set_palette function to apply the theme globally.
+            mui::ThemeManager::set_palette(named_palette.palette);
+            break;
+        }
+    }
 }
 
 void on_tool_changed()
@@ -562,25 +572,28 @@ void build_ui()
     auto theme_cb =
         [](Fl_Widget *w, void *v)
     {
-        Fl_Menu_Bar *bar = static_cast<Fl_Menu_Bar *>(w);
-        const Fl_Menu_Item *m = bar->mvalue();
-        if (m && m->label())
-        {
-            static_cast<ImageViewerApp *>(v)->on_change_theme(m->label());
-        }
+        auto *bar = static_cast<Fl_Menu_Bar *>(w);
+        const Fl_Menu_Item *item = bar->mvalue();
+        if (!item || !item->label()) return;
+
+        std::string path = item->label();
+        size_t last_slash = path.rfind('/');
+        std::string name = (last_slash != std::string::npos) ? path.substr(last_slash + 1) : path;
+        static_cast<ImageViewerApp *>(v)->on_change_theme(name.c_str());
     };
 
-    menu_bar->add("View/Theme/Aero", 0, theme_cb, this, FL_MENU_RADIO);
-    menu_bar->add("View/Theme/AquaClassic", 0, theme_cb, this, FL_MENU_RADIO);
-    menu_bar->add("View/Theme/Blue", 0, theme_cb, this, FL_MENU_RADIO);
-    menu_bar->add("View/Theme/Classic", 0, theme_cb, this, FL_MENU_RADIO);
-    menu_bar->add("View/Theme/Dark", 0, theme_cb, this, FL_MENU_RADIO);
-    menu_bar->add("View/Theme/Flat", 0, theme_cb, this, FL_MENU_RADIO);
-    menu_bar->add("View/Theme/Greybird", 0, theme_cb, this, FL_MENU_RADIO | FL_MENU_VALUE);
-    menu_bar->add("View/Theme/Material", 0, theme_cb, this, FL_MENU_RADIO);
-    menu_bar->add("View/Theme/Metro", 0, theme_cb, this, FL_MENU_RADIO);
-    menu_bar->add("View/Theme/Win10", 0, theme_cb, this, FL_MENU_RADIO);
-    menu_bar->add("View/Theme/WinXP", 0, theme_cb, this, FL_MENU_RADIO);
+    menu_bar->add("View/Theme", 0, 0, 0, FL_SUBMENU);
+    bool first = true;
+    for (const auto &named_palette : mui::get_theme_palettes())
+    {
+        std::string path = "View/Theme/" + named_palette.name;
+        int flags = FL_MENU_RADIO;
+        if (first) {
+            flags |= FL_MENU_VALUE;
+            first = false;
+        }
+        menu_bar->add(path.c_str(), 0, theme_cb, this, flags);
+    }
 
     menu_bar->add("Tools/Select", 'v', [](Fl_Widget *, void *v)
                   { static_cast<ImageViewerApp *>(v)->on_tool_select(); }, this);

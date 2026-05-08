@@ -8,9 +8,6 @@ namespace mui
     class Choice : public policy::HoverTracker<policy::CallbackRouter<Fl_Menu_>>
     {
     protected:
-        Fl_Color btn_color;
-        Fl_Color btn_hover_color;
-        Fl_Color btn_pressed_color;
         Fl_Boxtype btn_box;
         Fl_Boxtype btn_down_box;
         bool is_pressed = false;
@@ -19,14 +16,15 @@ namespace mui
         {
             fl_push_clip(x(), y(), w(), h());
 
+            const auto& palette = mui::ThemeManager::get_palette();
             Fl_Boxtype draw_b = is_pressed ? btn_down_box : btn_box;
-            Fl_Color draw_c = is_pressed ? btn_pressed_color : btn_color;
+            Fl_Color draw_c = is_pressed ? palette.bg_sec : palette.bg_main;
 
             if (!is_pressed && is_hovered && active_r())
             {
                 Fl_Boxtype hover_b = this->resolve_hover_box(btn_box);
                 if (hover_b != btn_box) draw_b = hover_b;
-                else draw_c = btn_hover_color;
+                else draw_c = palette.bg_sec; // Assuming bg_sec is the hover color for Choice
             }
 
             fl_draw_box(draw_b, x(), y(), w(), h(), draw_c);
@@ -34,7 +32,7 @@ namespace mui
             fl_color(active_r() ? textcolor() : fl_inactive(textcolor()));
             fl_font(textfont(), textsize());
             
-            if (const Fl_Menu_Item* m = mvalue()) {
+            if (const Fl_Menu_Item* m = mvalue()) { // mvalue() is from Fl_Menu_
                 fl_draw(m->text, x() + 6, y(), w() - 24, h(), FL_ALIGN_LEFT | FL_ALIGN_INSIDE);
             }
 
@@ -75,6 +73,11 @@ namespace mui
                 if (Fl::visible_focus())
                     Fl::focus(this);
 
+                // Update colors for the dropdown menu before showing it
+                const auto& palette = mui::ThemeManager::get_palette();
+                this->color(palette.bg_main);
+                this->selection_color(palette.selection);
+                this->textcolor(fl_contrast(palette.fg_main, palette.bg_main));
                 is_pressed = true;
                 redraw();
 
@@ -107,15 +110,10 @@ namespace mui
     public:
         Choice(int x, int y, int w, int h, const char *l = nullptr) : policy::HoverTracker<policy::CallbackRouter<Fl_Menu_>>(x, y, w, h, l)
         {
-            this->color(mui::ThemeManager::get_palette().bg_main);
-            this->textcolor(mui::ThemeManager::get_palette().fg_main);
-            this->selection_color(mui::ThemeManager::get_palette().selection);
+            // Colors are now handled dynamically in draw() or handle()
             this->down_box(Theme::schemes::MENU_POPUP_BOX);
             btn_box = FL_GTK_UP_BOX;
             btn_down_box = Theme::schemes::BUTTON_DOWN_BOX;
-            btn_color = mui::ThemeManager::get_palette().bg_main;
-            btn_hover_color = mui::ThemeManager::get_palette().bg_sec;
-            btn_pressed_color = mui::ThemeManager::get_palette().bg_sec;
         }
 
         template <typename T, void (T::*Method)()>

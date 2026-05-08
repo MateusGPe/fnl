@@ -12,9 +12,13 @@ namespace mui
     protected:
         void draw() override
         {
-            fl_push_clip(x(), y(), w(), h());
-
             const auto &palette = ThemeManager::get_palette();
+            // Dynamically update colors to reflect current theme
+            color(palette.bg_main);
+            selection_color(palette.selection);
+            labelcolor(palette.fg_main);
+
+            fl_push_clip(x(), y(), w(), h());
 
             fl_draw_box(FL_FLAT_BOX, x(), y(), w(), h(), color());
 
@@ -55,9 +59,6 @@ namespace mui
             : Fl_Progress(x, y, w, h, l)
         {
             box(FL_FLAT_BOX);
-            color(ThemeManager::get_palette().bg_main);
-            selection_color(ThemeManager::get_palette().selection);
-            labelcolor(ThemeManager::get_palette().fg_main);
         }
     };
 }

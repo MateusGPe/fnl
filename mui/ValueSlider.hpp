@@ -13,9 +13,15 @@ namespace mui
     protected:
         void draw() override
         {
+            const auto &palette = mui::ThemeManager::get_palette();
+            // Dynamically update colors to reflect current theme
+            color(palette.bg_main);
+            selection_color(palette.selection);
+            labelcolor(palette.fg_main);
+            textcolor(palette.fg_main);
+
             fl_push_clip(x(), y(), w(), h());
             fl_draw_box(box(), x(), y(), w(), h(), color());
-            const auto &palette = mui::ThemeManager::get_palette();
 
             int t_w = w(), t_h = h();
             int s_x = x(), s_y = y(), s_w = w(), s_h = h();
@@ -82,12 +88,12 @@ namespace mui
                 if (Fl::focus() == this)
                 {
                     core::draw_slider_halo(cx, cy, palette.metrics.slider_thumb_focus_halo_size,
-                                           fl_color_average(palette.selection, palette.bg_main, palette.metrics.slider_thumb_hover_halo_opacity * 2.0f));
+                                           fl_color_average(palette.focus_ring, palette.bg_main, palette.metrics.slider_thumb_hover_halo_opacity * 2.0f));
                 }
                 else if (is_hovered)
                 {
                     core::draw_slider_halo(cx, cy, palette.metrics.slider_thumb_focus_halo_size,
-                                           fl_color_average(palette.selection, palette.bg_main, palette.metrics.slider_thumb_hover_halo_opacity));
+                                           fl_color_average(palette.focus_ring, palette.bg_main, palette.metrics.slider_thumb_hover_halo_opacity));
                 }
             }
 
@@ -101,7 +107,6 @@ namespace mui
         ValueSlider(int x, int y, int w, int h, const char *l = nullptr, Args &&...args)
             : policy::HoverTracker<policy::CallbackRouter<Fl_Value_Slider>>(x, y, w, h, l, std::forward<Args>(args)...)
         {
-            textcolor(mui::ThemeManager::get_palette().fg_main);
             Fl_Value_Slider::box(FL_FLAT_BOX);
         }
     };

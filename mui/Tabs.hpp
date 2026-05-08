@@ -7,15 +7,22 @@ namespace mui
 {
     class Tabs : public Fl_Tabs
     {
+    protected:
+        void draw() override
+        {
+            const auto &palette = ThemeManager::get_palette();
+            // Dynamically update colors to reflect current theme
+            color(palette.bg_sec);
+            selection_color(palette.bg_main);
+            // The label colors for tabs are handled by Fl_Tabs internally,
+            // often contrasting with the tab's background color.
+            Fl_Tabs::draw();
+        }
     public:
         Tabs(int x, int y, int w, int h, const char *l = nullptr)
             : Fl_Tabs(x, y, w, h, l)
         {
-            const auto &palette = ThemeManager::get_palette();
-
             box(FL_UP_BOX);
-            color(palette.bg_sec);
-            selection_color(palette.bg_main);
         }
     };
 }

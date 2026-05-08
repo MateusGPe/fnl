@@ -8,6 +8,7 @@
 #include <type_traits>
 #include <FL/fl_draw.H>
 #include "Theme.hpp"
+
 namespace mui
 {
     using namespace policy;
@@ -18,12 +19,17 @@ namespace mui
     protected:
         void draw() override
         {
+            const auto &palette = mui::ThemeManager::get_palette();
+            // Dynamically update colors to reflect current theme
+            this->color(palette.bg_main);
+            this->selection_color(palette.selection);
+            this->labelcolor(palette.fg_main);
+
             fl_push_clip(this->x(), this->y(), this->w(), this->h());
 
             Fl_Boxtype draw_b = this->value() ? this->down_box() : this->box();
             Fl_Color draw_c = this->value() ? this->selection_color() : this->color();
             const bool has_focus = Fl::focus() == this;
-            auto palette = mui::ThemeManager::get_palette();
 
             if constexpr (requires { this->is_hovered; })
             {
@@ -47,7 +53,7 @@ namespace mui
                     if (this->is_hovered && this->value())
                     {
                         uint8_t r, g, b;
-                        Fl::get_color(palette.selection, r, g, b);
+                        Fl::get_color(palette.focus_ring, r, g, b);
                         fl_color(rgba(r, g, b, static_cast<uint8_t>(palette.metrics.focus_ring_opacity * 255)));
 
                         fl_line_style(FL_SOLID, palette.metrics.focus_ring_width);
