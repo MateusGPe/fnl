@@ -1,5 +1,4 @@
 #pragma once
-#include "Image.hpp"
 #include "ImageViewer.hpp"
 #include "MenuBar.hpp"
 #include "NativeFileChooser.hpp"
@@ -12,7 +11,6 @@
 #include "Policies.hpp"
 #include "Choice.hpp"
 #include "Button.hpp"
-#include "LightButton.hpp"
 #include "Slider.hpp"
 #include "Spinner.hpp"
 #include "ValueSlider.hpp"

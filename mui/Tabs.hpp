@@ -1,4 +1,3 @@
-// Tabs.hpp
 #pragma once
 #include "Theme.hpp"
 #include <FL/Fl_Tabs.H>
@@ -14,7 +13,6 @@ namespace mui
         {
             const auto &palette = ThemeManager::get_palette();
 
-            // Remove the 90s 3D border around the pane
             box(FL_UP_BOX);
             color(palette.bg_sec);
             selection_color(palette.bg_main);

@@ -1,4 +1,3 @@
-// Theme/Theme.hpp
 #pragma once
 
 #include <FL/Enumerations.H>
@@ -169,7 +168,6 @@ namespace mui
 
         Fl::scheme("gtk+");
 
-        // Blanketing core box types mapped to standard offsets.
         Fl::set_boxtype(FL_GTK_UP_BOX, engine::tpl_box<&ThemePalette::btn_grad, &ThemePalette::btn_frame>, 2, 2, 4, 4);
         Fl::set_boxtype(FL_GTK_UP_FRAME, engine::tpl_frame<&ThemePalette::btn_frame>, 2, 2, 4, 4);
         Fl::set_boxtype(FL_PLASTIC_UP_BOX, engine::tpl_box<&ThemePalette::hover_grad, &ThemePalette::hover_frame>, 2, 2, 4, 4);
@@ -197,7 +195,6 @@ namespace mui
         Fl::set_boxtype(FL_GLEAM_DOWN_BOX, engine::smart_down_box, 2, 2, 4, 4);
         Fl::set_boxtype(FL_GLEAM_ROUND_UP_BOX, FL_FLAT_BOX);
 
-        // Custom Themes Boxes
         Fl::set_boxtype(Theme::schemes::ROUNDED_BUTTON_UP_BOX, engine::tpl_box<&ThemePalette::btn_grad, &ThemePalette::btn_frame>, 2, 2, 4, 4);
         Fl::set_boxtype(Theme::schemes::ROUNDED_BUTTON_UP_FRAME, engine::tpl_frame<&ThemePalette::btn_frame>, 2, 2, 4, 4);
         Fl::set_boxtype(Theme::schemes::ROUNDED_HOVERED_UP_BOX, engine::tpl_box<&ThemePalette::hover_grad, &ThemePalette::hover_frame>, 2, 2, 4, 4);

@@ -24,9 +24,9 @@ namespace mui
 
     struct ThemeMetrics
     {
-        int radius = 2;
+        int radius = 5;
         float focus_ring_opacity = 0.2f;
-        int focus_ring_width = 3;
+        int focus_ring_width = 1;
         int choice_arrow_padding = 14;
         int choice_arrow_thickness = 2;
         int choice_arrow_height = 4;
@@ -41,7 +41,6 @@ namespace mui
         int valueslider_min_slider_size = 20;
         int spinner_arrow_size = 8;
         int progress_height = 6;
-        int progress_corner_radius = 3;
         int imageviewer_grid_size = 20;
         int imageviewer_handle_size = 8;
         int imageviewer_handle_hit_padding = 2;

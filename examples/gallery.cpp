@@ -9,7 +9,6 @@
 #include <FL/Fl_Return_Button.H>
 #include <FL/Fl_Light_Button.H>
 #include <FL/Fl_Check_Button.H>
-#include <FL/Fl_Radio_Button.H>
 #include <FL/Fl_Input.H>
 #include <FL/Fl_Secret_Input.H>
 #include <FL/Fl_Progress.H>
@@ -110,7 +109,6 @@ public:
 
     static void on_theme_menu_select(Fl_Widget *w, void *v)
     {
-        // Themes are no longer dynamic.
     }
 
     static void on_file_chooser(Fl_Widget *, void *)
@@ -186,11 +184,11 @@ public:
                 cbtn->value(1);
                 cbtn->callback(on_generic_toggle, this);
 
-                Fl_Radio_Button *rad1 = new Fl_Radio_Button(110, sy, 80, 30, "Radio 1");
+                mui::RadioButton *rad1 = new mui::RadioButton(110, sy, 80, 30, "Radio 1");
                 rad1->value(1);
                 rad1->callback(on_generic_toggle, this);
 
-                Fl_Radio_Button *rad2 = new Fl_Radio_Button(200, sy, 80, 30, "Radio 2");
+                mui::RadioButton *rad2 = new mui::RadioButton(200, sy, 80, 30, "Radio 2");
                 rad2->callback(on_generic_toggle, this);
                 sy += 50;
 

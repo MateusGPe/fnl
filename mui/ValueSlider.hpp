@@ -74,9 +74,8 @@ namespace mui
                 is_horiz,
                 track_thickness,
                 active_r() ? palette.selection : fl_inactive(palette.selection),
-                palette.inactive,
-                cx, cy
-            );
+                palette.bg_sec,
+                cx, cy);
 
             if (active_r())
             {
