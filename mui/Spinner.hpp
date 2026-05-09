@@ -12,8 +12,8 @@ namespace mui
     protected:
         void draw() override
         {
-            const auto &palette = mui::ThemeManager::get_palette();
-            // Dynamically update colors to reflect current theme
+            const auto &palette = ThemeManager::get_palette();
+
             color(palette.input_bg);
             selection_color(palette.selection);
             labelcolor(palette.fg_main);
@@ -24,21 +24,24 @@ namespace mui
             down_button_.color(palette.input_bg);
 
             if (damage() & ~FL_DAMAGE_CHILD)
-            {
-                fl_draw_box(Theme::schemes::ROUNDED_INPUT_THIN_DOWN_BOX, x(), y(), w(), h(), color());
-            }
+                fl_draw_box(Theme::schemes::ROUNDED_INPUT_THIN_DOWN_BOX,
+                            x(), y(), w(), h(), color());
 
             Fl_Spinner::draw();
 
-            int cx = up_button_.x() + up_button_.w() / 2;
-            int cy = up_button_.y() + up_button_.h() / 2;
-            Fl_Color c = up_button_.value() ? palette.focus_ring : palette.spinner_arrow;
-            core::draw_spinner_arrow(cx, cy, palette.metrics.spinner_arrow_size, true, active_r() ? c : fl_inactive(c));
+            draw_arrow(up_button_, true, palette);
+            draw_arrow(down_button_, false, palette);
+        }
 
-            cx = down_button_.x() + down_button_.w() / 2;
-            cy = down_button_.y() + down_button_.h() / 2;
-            c = down_button_.value() ? palette.focus_ring : palette.spinner_arrow;
-            core::draw_spinner_arrow(cx, cy, palette.metrics.spinner_arrow_size, false, active_r() ? c : fl_inactive(c));
+    private:
+        void draw_arrow(const Fl_Repeat_Button &btn, bool is_up,
+                        const ThemePalette &palette) const
+        {
+            const int cx = btn.x() + btn.w() / 2;
+            const int cy = btn.y() + btn.h() / 2;
+            const Fl_Color base = btn.value() ? palette.focus_ring : palette.spinner_arrow;
+            const Fl_Color c = active_r() ? base : fl_inactive(base);
+            core::draw_spinner_arrow(cx, cy, palette.metrics.spinner_arrow_size, is_up, c);
         }
 
     public:
@@ -53,18 +56,22 @@ namespace mui
             down_button_.label("");
             resize(x, y, w, h);
         }
-        void resize(int X, int Y, int W, int H)
+
+        void resize(int X, int Y, int W, int H) override
         {
             Fl_Group::resize(X, Y, W, H);
-            int wpad = 4, hpad = 2;
-            X += wpad;
-            Y += hpad;
-            W -= wpad << 1;
-            H -= hpad << 1;
-            input_.resize(X, Y, W - H / 2 - 2, H);
-            up_button_.resize(X + W - H / 2 - 2, Y, H / 2 + 2, H / 2);
-            down_button_.resize(X + W - H / 2 - 2, Y + H - H / 2,
-                                H / 2 + 2, H / 2);
+
+            constexpr int wpad = 4, hpad = 2;
+            const int ix = X + wpad;
+            const int iy = Y + hpad;
+            const int iw = W - wpad * 2;
+            const int ih = H - hpad * 2;
+
+            const int btn_w = ih / 2 + 2;
+
+            input_.resize(ix, iy, iw - btn_w - 2, ih);
+            up_button_.resize(ix + iw - btn_w - 2, iy, btn_w, ih / 2);
+            down_button_.resize(ix + iw - btn_w - 2, iy + ih - ih / 2, btn_w, ih / 2);
         }
     };
 }

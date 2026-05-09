@@ -1,6 +1,7 @@
 #pragma once
 #include "Theme.hpp"
 #include <FL/Fl_Menu_Bar.H>
+
 namespace mui
 {
     class MenuBar : public Fl_Menu_Bar

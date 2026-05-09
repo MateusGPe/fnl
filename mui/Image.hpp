@@ -40,7 +40,7 @@ namespace mui
             fl_register_images();
             Fl_Shared_Image *shared = Fl_Shared_Image::get(filepath);
 
-            Fl_Image* raw_ptr = nullptr;
+            Fl_Image *raw_ptr = nullptr;
             if (shared)
             {
                 raw_ptr = shared->copy();
@@ -54,7 +54,7 @@ namespace mui
             }
             m_ptr.reset(raw_ptr);
         }
-        
+
         explicit Image(Fl_Image *raw_copy) : m_ptr(raw_copy), m_filepath("(from raw pointer)") {}
 
         Image(const Image &) = delete;

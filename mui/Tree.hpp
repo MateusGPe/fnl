@@ -3,23 +3,23 @@
 #include "Policies.hpp"
 #include <FL/Fl_Tree.H>
 #include <FL/Fl_Browser.H>
-#include <FL/Fl_Value_Output.H>
 
 namespace mui
 {
+
     class Tree : public policy::HoverTracker<policy::CallbackRouter<Fl_Tree>>
     {
     protected:
         void draw() override
         {
             const auto &palette = ThemeManager::get_palette();
-            // Dynamically update colors to reflect current theme
             color(palette.input_bg);
             selection_color(palette.selection);
             item_labelbgcolor(palette.input_bg);
             item_labelfgcolor(palette.fg_main);
             Fl_Tree::draw();
         }
+
     public:
         Tree(int x, int y, int w, int h, const char *l = nullptr)
             : policy::HoverTracker<policy::CallbackRouter<Fl_Tree>>(x, y, w, h, l)
@@ -38,12 +38,12 @@ namespace mui
         void draw() override
         {
             const auto &palette = ThemeManager::get_palette();
-            // Dynamically update colors to reflect current theme
             color(palette.input_bg);
             selection_color(palette.selection);
             textcolor(palette.fg_main);
             Fl_Browser::draw();
         }
+
     public:
         Browser(int x, int y, int w, int h, const char *l = nullptr)
             : policy::HoverTracker<policy::CallbackRouter<Fl_Browser>>(x, y, w, h, l)

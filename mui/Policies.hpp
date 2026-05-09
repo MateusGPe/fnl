@@ -9,25 +9,23 @@ namespace mui
 {
     namespace policy
     {
-
         template <typename FlBase>
         class CallbackRouter : public FlBase
         {
         protected:
             std::function<void()> m_handler;
 
-            static void thunk(Fl_Widget *w, void *data)
+        private:
+            static void thunk(Fl_Widget *, void *data)
             {
-                CallbackRouter *self = static_cast<CallbackRouter *>(data);
+                auto *self = static_cast<CallbackRouter *>(data);
                 if (self && self->m_handler)
-                {
                     self->m_handler();
-                }
             }
 
         public:
             template <typename... Args>
-            CallbackRouter(Args &&...args) : FlBase(std::forward<Args>(args)...)
+            explicit CallbackRouter(Args &&...args) : FlBase(std::forward<Args>(args)...)
             {
                 this->callback(thunk, this);
             }
@@ -35,13 +33,26 @@ namespace mui
             template <typename T, void (T::*Method)()>
             void bind_callback(T *instance)
             {
-                m_handler = [instance]()
+                m_handler = [instance]
                 { (instance->*Method)(); };
             }
 
             void bind_callback(std::function<void()> handler)
             {
                 m_handler = std::move(handler);
+            }
+
+            template <typename T, void (T::*Method)()>
+            auto &on_change(T *instance)
+            {
+                bind_callback<T, Method>(instance);
+                return *this;
+            }
+
+            auto &on_change(std::function<void()> handler)
+            {
+                bind_callback(std::move(handler));
+                return *this;
             }
         };
 
@@ -50,15 +61,11 @@ namespace mui
         {
         public:
             template <typename... Args>
-            AutoThemed(Args &&...args) : FlBase(std::forward<Args>(args)...)
+            explicit AutoThemed(Args &&...args) : FlBase(std::forward<Args>(args)...)
             {
                 this->box(FL_GTK_UP_BOX);
                 if constexpr (requires { this->down_box(FL_NO_BOX); })
-                {
                     this->down_box(Theme::schemes::BUTTON_DOWN_BOX);
-                }
-                // Widget colors (like background and selection) are now handled dynamically by FLTK's global theme settings
-                // (Fl::background, Fl::selection_color etc.) or explicitly in draw() methods.
             }
         };
 
@@ -68,7 +75,7 @@ namespace mui
         protected:
             bool is_hovered = false;
 
-            static inline Fl_Boxtype resolve_hover_box(Fl_Boxtype base)
+            [[nodiscard]] static Fl_Boxtype resolve_hover_box(Fl_Boxtype base) noexcept
             {
                 switch (base)
                 {
@@ -87,11 +94,11 @@ namespace mui
 
         public:
             template <typename... Args>
-            HoverTracker(Args &&...args) : FlBase(std::forward<Args>(args)...) {}
+            explicit HoverTracker(Args &&...args) : FlBase(std::forward<Args>(args)...) {}
 
             int handle(int event) override
             {
-                int res = FlBase::handle(event);
+                const int res = FlBase::handle(event);
                 switch (event)
                 {
                 case FL_ENTER:
@@ -106,6 +113,8 @@ namespace mui
                 case FL_UNFOCUS:
                     this->redraw();
                     break;
+                default:
+                    break;
                 }
                 return res;
             }
@@ -116,48 +125,64 @@ namespace mui
         {
         protected:
             bool cursor_visible = false;
-            static void blink_cb(void *data)
-            {
-                Blinkable *self = static_cast<Blinkable *>(data);
-                if (Fl::focus() == self)
-                {
-                    self->cursor_visible = !self->cursor_visible;
-                    if constexpr (requires { self->cursor_color(FL_BLACK); })
-                    {
-                        self->cursor_color(self->cursor_visible ? mui::ThemeManager::get_palette().selection : mui::ThemeManager::get_palette().input_bg);
-                        self->damage(FL_DAMAGE_USER1);
-                    }
-                    else
-                    {
-                        self->redraw();
-                    }
-                    Fl::repeat_timeout(0.5, blink_cb, data);
-                }
-                else
-                {
-                    self->cursor_visible = false;
-                }
-            }
 
-            void restart_blink()
+        private:
+            void apply_cursor_visible()
             {
-                Fl::remove_timeout(blink_cb, this);
                 cursor_visible = true;
                 if constexpr (requires { this->cursor_color(FL_BLACK); })
                 {
-                    this->cursor_color(mui::ThemeManager::get_palette().selection);
+                    this->cursor_color(ThemeManager::get_palette().selection);
                     this->damage(FL_DAMAGE_USER1);
                 }
                 else
                 {
                     this->redraw();
                 }
+            }
+
+            void apply_cursor_hidden()
+            {
+                cursor_visible = false;
+                if constexpr (requires { this->cursor_color(FL_BLACK); })
+                {
+                    this->cursor_color(ThemeManager::get_palette().input_bg);
+                    this->damage(FL_DAMAGE_USER1);
+                }
+                else
+                {
+                    this->redraw();
+                }
+            }
+
+            static void blink_cb(void *data)
+            {
+                auto *self = static_cast<Blinkable *>(data);
+                if (Fl::focus() != self)
+                {
+                    self->cursor_visible = false;
+                    return;
+                }
+                self->cursor_visible = !self->cursor_visible;
+                if (self->cursor_visible)
+                    self->apply_cursor_visible();
+                else
+                    self->apply_cursor_hidden();
+
+                Fl::repeat_timeout(0.5, blink_cb, data);
+            }
+
+        protected:
+            void restart_blink()
+            {
+                Fl::remove_timeout(blink_cb, this);
+                apply_cursor_visible();
                 Fl::add_timeout(0.5, blink_cb, this);
             }
 
         public:
             template <typename... Args>
-            Blinkable(Args &&...args) : FlBase(std::forward<Args>(args)...) {}
+            explicit Blinkable(Args &&...args) : FlBase(std::forward<Args>(args)...) {}
 
             ~Blinkable()
             {
@@ -166,7 +191,7 @@ namespace mui
 
             int handle(int event) override
             {
-                int res = FlBase::handle(event);
+                const int res = FlBase::handle(event);
                 switch (event)
                 {
                 case FL_FOCUS:
@@ -177,16 +202,9 @@ namespace mui
                     break;
                 case FL_UNFOCUS:
                     Fl::remove_timeout(blink_cb, this);
-                    cursor_visible = false;
-                    if constexpr (requires { this->cursor_color(FL_BLACK); })
-                    {
-                        this->cursor_color(mui::ThemeManager::get_palette().input_bg);
-                        this->damage(FL_DAMAGE_USER1);
-                    }
-                    else
-                    {
-                        this->redraw();
-                    }
+                    apply_cursor_hidden();
+                    break;
+                default:
                     break;
                 }
                 return res;

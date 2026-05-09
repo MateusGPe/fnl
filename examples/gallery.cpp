@@ -207,7 +207,7 @@ public:
                     lbtn->callback(on_generic_toggle, this);
                     row1->fixed(lbtn, 80);
 
-                    new Fl_Box(0, 0, 0, 0); // Spacer
+                    new Fl_Box(0, 0, 0, 0);
                 }
                 row1->end();
                 tab1->fixed(row1, 30);
@@ -229,7 +229,7 @@ public:
                     rad2->callback(on_generic_toggle, this);
                     row2->fixed(rad2, 80);
 
-                    new Fl_Box(0, 0, 0, 0); // Spacer
+                    new Fl_Box(0, 0, 0, 0);
                 }
                 row2->end();
                 tab1->fixed(row2, 30);
@@ -255,7 +255,7 @@ public:
                     ch->callback(on_generic_select, this);
                     row3->fixed(ch, 120);
 
-                    new Fl_Box(0, 0, 0, 0); // Spacer
+                    new Fl_Box(0, 0, 0, 0);
                 }
                 row3->end();
                 tab1->fixed(row3, 30);
@@ -273,7 +273,7 @@ public:
                     sl->callback(on_generic_change, this);
                     row4->fixed(sl, 200);
 
-                    new Fl_Box(0, 0, 0, 0); // Spacer
+                    new Fl_Box(0, 0, 0, 0);
                 }
                 row4->end();
                 tab1->fixed(row4, 30);
@@ -286,12 +286,17 @@ public:
                     prg->value(65);
                     row5->fixed(prg, 200);
 
-                    new Fl_Box(0, 0, 0, 0); // Spacer
+                    new Fl_Box(0, 0, 0, 0);
                 }
                 row5->end();
                 tab1->fixed(row5, 25);
+                row1->layout();
+                row2->layout();
+                row3->layout();
+                row4->layout();
+                row5->layout();
 
-                new Fl_Box(0, 0, 0, 0); // Vertical spacer
+                new Fl_Box(0, 0, 0, 0);
             }
             tab1->end();
 

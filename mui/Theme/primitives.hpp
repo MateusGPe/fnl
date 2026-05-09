@@ -5,9 +5,6 @@
 #include <algorithm>
 #include <cstdint>
 #include <cmath>
-#include <cstdio>
-#include <string>
-#include <unordered_map>
 
 namespace mui
 {
@@ -21,11 +18,13 @@ namespace mui
             const char *classic_code;
         };
 
-        inline Fl_Color activated_color(Fl_Color c, bool active)
+        [[nodiscard]] inline Fl_Color activated_color(Fl_Color c, bool active) noexcept
         {
             return active ? c : fl_inactive(c);
         }
-        inline void draw_rounded_frame_h(int x, int y, int w, int h, const FrameColors &fc, int radius, bool active)
+
+        inline void draw_rounded_frame_h(int x, int y, int w, int h,
+                                         const FrameColors &fc, int radius, bool active)
         {
             if (fc.out_top)
             {
@@ -39,54 +38,123 @@ namespace mui
             }
         }
 
-        inline void draw_smart_gradient_4(
-            int x, int y, int w, int h,
-            Fl_Color t_start, Fl_Color t_end,
-            Fl_Color b_start, Fl_Color b_end, bool active)
+        inline void draw_solid_frame(int x, int y, int w, int h,
+                                     const FrameColors &fc, bool active)
+        {
+            fl_color(activated_color(fc.out_top, active));
+            fl_rect(x, y, w, h);
+            if (fc.in_top != 0)
+            {
+                fl_color(activated_color(fc.in_top, active));
+                fl_rect(x + 1, y + 1, w - 2, h - 2);
+            }
+        }
+
+        inline void draw_beveled_frame(int x, int y, int w, int h,
+                                       const FrameColors &fc, bool active)
+        {
+            auto set = [&](Fl_Color c)
+            { fl_color(activated_color(c, active)); };
+
+            if (fc.out_top)
+            {
+                set(fc.out_top);
+                fl_xyline(x + 2, y, x + w - 3);
+            }
+            if (fc.out_side)
+            {
+                set(fc.out_side);
+                fl_yxline(x, y + 2, y + h - 3);
+                fl_yxline(x + w - 1, y + 2, y + h - 3);
+            }
+            if (fc.out_bot)
+            {
+                set(fc.out_bot);
+                fl_xyline(x + 2, y + h - 1, x + w - 3);
+            }
+            if (fc.in_top)
+            {
+                set(fc.in_top);
+                fl_xyline(x + 2, y + 1, x + w - 3);
+            }
+            if (fc.in_side)
+            {
+                set(fc.in_side);
+                fl_yxline(x + 1, y + 2, y + h - 3);
+                fl_yxline(x + w - 2, y + 2, y + h - 3);
+            }
+            if (fc.in_bot)
+            {
+                set(fc.in_bot);
+                fl_xyline(x + 2, y + h - 2, x + w - 3);
+            }
+            if (fc.dot1)
+            {
+                set(fc.dot1);
+                fl_xyline(x, y + 1, x + 1, y);
+                fl_yxline(x + w - 2, y, y + 1, x + w - 1);
+            }
+            if (fc.dot2)
+            {
+                set(fc.dot2);
+                fl_xyline(x, y + h - 2, x + 1, y + h - 1);
+                fl_yxline(x + w - 2, y + h - 1, y + h - 2, x + w - 1);
+            }
+        }
+
+        inline void draw_smart_gradient_4(int x, int y, int w, int h,
+                                          Fl_Color t_start, Fl_Color t_end,
+                                          Fl_Color b_start, Fl_Color b_end,
+                                          bool active)
         {
             if (t_start == 0 && t_end == 0 && b_start == 0 && b_end == 0)
                 return;
+
             if (t_start == t_end && b_start == b_end && t_start == b_start)
             {
                 fl_color(activated_color(t_start, active));
                 fl_rectf(x, y, w, h);
                 return;
             }
+
             if (w >= h)
             {
-                int half_h = h / 2;
+                const int half_h = h / 2;
                 for (int i = 0; i < half_h; ++i)
                 {
-                    float weight = 1.0f - (float)i / (float)(half_h > 0 ? half_h : 1);
-                    fl_color(activated_color(fl_color_average(t_start, t_end, weight), active));
+                    float t = 1.0f - static_cast<float>(i) / static_cast<float>(half_h > 0 ? half_h : 1);
+                    fl_color(activated_color(fl_color_average(t_start, t_end, t), active));
                     fl_xyline(x, y + i, x + w - 1);
                 }
                 for (int i = 0; i < h - half_h; ++i)
                 {
-                    float weight = 1.0f - (float)i / (float)((h - half_h) > 0 ? (h - half_h) : 1);
-                    fl_color(activated_color(fl_color_average(b_start, b_end, weight), active));
+                    float t = 1.0f - static_cast<float>(i) / static_cast<float>((h - half_h) > 0 ? (h - half_h) : 1);
+                    fl_color(activated_color(fl_color_average(b_start, b_end, t), active));
                     fl_xyline(x, y + half_h + i, x + w - 1);
                 }
             }
             else
             {
-                int half_w = w / 2;
+                const int half_w = w / 2;
                 for (int i = 0; i < half_w; ++i)
                 {
-                    float weight = 1.0f - (float)i / (float)(half_w > 0 ? half_w : 1);
-                    fl_color(activated_color(fl_color_average(t_start, t_end, weight), active));
+                    float t = 1.0f - static_cast<float>(i) / static_cast<float>(half_w > 0 ? half_w : 1);
+                    fl_color(activated_color(fl_color_average(t_start, t_end, t), active));
                     fl_yxline(x + i, y, y + h - 1);
                 }
                 for (int i = 0; i < w - half_w; ++i)
                 {
-                    float weight = 1.0f - (float)i / (float)((w - half_w) > 0 ? (w - half_w) : 1);
-                    fl_color(activated_color(fl_color_average(b_start, b_end, weight), active));
+                    float t = 1.0f - static_cast<float>(i) / static_cast<float>((w - half_w) > 0 ? (w - half_w) : 1);
+                    fl_color(activated_color(fl_color_average(b_start, b_end, t), active));
                     fl_yxline(x + half_w + i, y, y + h - 1);
                 }
             }
         }
 
-        inline void draw_rounded_gradient_box(int x, int y, int w, int h, Fl_Color t_start, Fl_Color t_end, Fl_Color b_start, Fl_Color b_end, int radius, bool active)
+        inline void draw_rounded_gradient_box(int x, int y, int w, int h,
+                                              Fl_Color t_start, Fl_Color t_end,
+                                              Fl_Color b_start, Fl_Color b_end,
+                                              int radius, bool active)
         {
             if (t_start == 0 && t_end == 0 && b_start == 0 && b_end == 0)
                 return;
@@ -111,104 +179,43 @@ namespace mui
                 return;
             }
 
-            int half_h = h / 2;
+            const int half_h = h / 2;
             for (int i = 0; i < h; ++i)
             {
                 Fl_Color c;
                 if (i < half_h)
                 {
-                    float weight = 1.0f - (float)i / (float)(half_h > 0 ? half_h : 1);
-                    c = fl_color_average(t_start, t_end, weight);
+                    float t = 1.0f - static_cast<float>(i) / static_cast<float>(half_h > 0 ? half_h : 1);
+                    c = fl_color_average(t_start, t_end, t);
                 }
                 else
                 {
-                    float weight = 1.0f - (float)(i - half_h) / (float)((h - half_h) > 0 ? (h - half_h) : 1);
-                    c = fl_color_average(b_start, b_end, weight);
+                    float t = 1.0f - static_cast<float>(i - half_h) / static_cast<float>((h - half_h) > 0 ? (h - half_h) : 1);
+                    c = fl_color_average(b_start, b_end, t);
                 }
                 fl_color(activated_color(c, active));
 
                 int dx = 0;
                 if (i < radius)
-                { // top corners
+                {
                     double y_rel = i + 0.5;
-                    dx = static_cast<int>(round(radius - sqrt(2.0 * radius * y_rel - y_rel * y_rel)));
+                    dx = static_cast<int>(std::round(radius - std::sqrt(2.0 * radius * y_rel - y_rel * y_rel)));
                 }
                 else if (i >= h - radius)
-                { // bottom corners
+                {
                     double y_rel = (h - 1 - i) + 0.5;
-                    dx = static_cast<int>(round(radius - sqrt(2.0 * radius * y_rel - y_rel * y_rel)));
+                    dx = static_cast<int>(std::round(radius - std::sqrt(2.0 * radius * y_rel - y_rel * y_rel)));
                 }
                 fl_xyline(x + dx, y + i, x + w - 1 - dx);
             }
         }
-        inline void draw_beveled_frame(int x, int y, int w, int h, const FrameColors &fc, bool active)
-        {
-            if (fc.out_top)
-            {
-                fl_color(activated_color(fc.out_top, active));
-                fl_xyline(x + 2, y, x + w - 3);
-            }
-            if (fc.out_side)
-            {
-                fl_color(activated_color(fc.out_side, active));
-                fl_yxline(x, y + 2, y + h - 3);
-                fl_yxline(x + w - 1, y + 2, y + h - 3);
-            }
-            if (fc.out_bot)
-            {
-                fl_color(activated_color(fc.out_bot, active));
-                fl_xyline(x + 2, y + h - 1, x + w - 3);
-            }
-            if (fc.in_top)
-            {
-                fl_color(activated_color(fc.in_top, active));
-                fl_xyline(x + 2, y + 1, x + w - 3);
-            }
-            if (fc.in_side)
-            {
-                fl_color(activated_color(fc.in_side, active));
-                fl_yxline(x + 1, y + 2, y + h - 3);
-                fl_yxline(x + w - 2, y + 2, y + h - 3);
-            }
-            if (fc.in_bot)
-            {
-                fl_color(activated_color(fc.in_bot, active));
-                fl_xyline(x + 2, y + h - 2, x + w - 3);
-            }
-            if (fc.dot1)
-            {
-                fl_color(activated_color(fc.dot1, active));
-                fl_xyline(x, y + 1, x + 1, y);
-                fl_yxline(x + w - 2, y, y + 1, x + w - 1);
-            }
-            if (fc.dot2)
-            {
-                fl_color(activated_color(fc.dot2, active));
-                fl_xyline(x, y + h - 2, x + 1, y + h - 1);
-                fl_yxline(x + w - 2, y + h - 1, y + h - 2, x + w - 1);
-            }
-        }
 
-        inline void draw_solid_frame(int x, int y, int w, int h, const FrameColors &fc, bool active)
+        inline void draw_slider_track_split(int start_coord, int mid_coord, int end_coord,
+                                            int cross_coord, int track_thickness,
+                                            Fl_Color filled_color, Fl_Color empty_color,
+                                            bool is_horiz)
         {
-            fl_color(activated_color(fc.out_top, active));
-            fl_rect(x, y, w, h);
-            if (fc.in_top != 0)
-            {
-                fl_color(activated_color(fc.in_top, active));
-                fl_rect(x + 1, y + 1, w - 2, h - 2);
-            }
-        }
-
-        inline void draw_radio_dot(int cx, int cy, int dot_size, Fl_Color dot_color)
-        {
-            fl_color(dot_color);
-            fl_pie(cx - dot_size / 2, cy - dot_size / 2, dot_size, dot_size, 0, 360);
-        }
-
-        inline void draw_slider_track_split(int start_coord, int mid_coord, int end_coord, int cross_coord, int track_thickness, Fl_Color filled_color, Fl_Color empty_color, bool is_horiz)
-        {
-            fl_line_style(FL_SOLID | FL_CAP_ROUND, track_thickness, 0);
+            fl_line_style(FL_SOLID | FL_CAP_ROUND, track_thickness, nullptr);
             if (is_horiz)
             {
                 fl_color(empty_color);
@@ -227,41 +234,30 @@ namespace mui
         }
 
         inline void calculate_slider_thumb_position_and_draw_track(
-            // The area of the slider part of the widget
             int slider_area_x, int slider_area_y, int slider_area_w, int slider_area_h,
-            // The drawable track area (inside slider_area, accounting for thumb padding)
             int track_area_x, int track_area_y, int track_area_w, int track_area_h,
-            double val, // value 0.0-1.0
+            double val,
             bool is_horiz,
             int track_thickness,
             Fl_Color filled_color,
             Fl_Color empty_color,
-            // Output thumb center coordinates
             int &out_cx, int &out_cy)
         {
             if (is_horiz)
             {
                 out_cx = track_area_x + static_cast<int>(val * track_area_w);
                 out_cy = slider_area_y + slider_area_h / 2;
-
                 draw_slider_track_split(
                     track_area_x, out_cx, track_area_x + track_area_w, out_cy,
-                    track_thickness,
-                    filled_color,
-                    empty_color,
-                    true);
+                    track_thickness, filled_color, empty_color, true);
             }
             else
             {
                 out_cx = slider_area_x + slider_area_w / 2;
                 out_cy = track_area_y + static_cast<int>((1.0 - val) * track_area_h);
-
                 draw_slider_track_split(
                     track_area_y, out_cy, track_area_y + track_area_h, out_cx,
-                    track_thickness,
-                    filled_color,
-                    empty_color,
-                    false);
+                    track_thickness, filled_color, empty_color, false);
             }
         }
 
@@ -277,9 +273,10 @@ namespace mui
             fl_pie(cx - size / 2, cy - size / 2, size, size, 0, 360);
         }
 
-        inline void draw_spinner_separators(int x, int y, int w, int h, int btn_w, int inset, Fl_Color color)
+        inline void draw_spinner_separators(int x, int y, int w, int h,
+                                            int btn_w, int inset, Fl_Color color)
         {
-            int btn_x = x + w - btn_w;
+            const int btn_x = x + w - btn_w;
             fl_color(color);
             fl_line(btn_x, y + inset, btn_x, y + h - inset - 1);
             fl_line(btn_x, y + h / 2, x + w - inset, y + h / 2);
@@ -287,9 +284,20 @@ namespace mui
 
         inline void draw_spinner_arrow(int cx, int cy, int size, bool is_up, Fl_Color color)
         {
-            const int h_size = size >> 1, q_size = size >> 2;
+            const int h_size = size >> 1;
+            const int q_size = size >> 2;
             fl_color(color);
-            fl_polygon(cx - h_size, cy + (is_up ? q_size : -q_size), cx, cy + (is_up ? -q_size : q_size), cx + h_size, cy + (is_up ? q_size : -q_size));
+            fl_polygon(
+                cx - h_size, cy + (is_up ? q_size : -q_size),
+                cx, cy + (is_up ? -q_size : q_size),
+                cx + h_size, cy + (is_up ? q_size : -q_size));
         }
+
+        inline void draw_radio_dot(int cx, int cy, int dot_size, Fl_Color dot_color)
+        {
+            fl_color(dot_color);
+            fl_pie(cx - dot_size / 2, cy - dot_size / 2, dot_size, dot_size, 0, 360);
+        }
+
     }
 }

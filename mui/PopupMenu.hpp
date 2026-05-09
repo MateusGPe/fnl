@@ -7,39 +7,33 @@ namespace mui
 {
     class PopupMenu
     {
-    private:
-        Fl_Menu_Button m_menu_button;
-        int m_last_add_idx = -1;
-
     public:
-        Fl_Menu_Button *handle() { return &m_menu_button; }
+        [[nodiscard]] Fl_Menu_Button *handle() { return &m_btn; }
 
-        PopupMenu() : m_menu_button(0, 0, 0, 0, nullptr)
+        PopupMenu() : m_btn(-1, -1, 1, 1, nullptr)
         {
-            m_menu_button.type(Fl_Menu_Button::POPUP3);
-            m_menu_button.down_box(Theme::schemes::MENU_POPUP_BOX);
+            m_btn.type(Fl_Menu_Button::POPUP3);
+            m_btn.down_box(Theme::schemes::MENU_POPUP_BOX);
         }
 
         template <typename T, void (T::*Method)()>
-        PopupMenu &add(const char *path, T *instance, int shortcut = 0, int flags = 0)
+        PopupMenu &add(const char *path, T *instance,
+                       int shortcut = 0, int flags = 0)
         {
-            auto thunk = [](Fl_Widget *, void *data)
-            {
-                (static_cast<T *>(data)->*Method)();
-            };
-            m_last_add_idx = m_menu_button.add(path, shortcut, thunk, instance, flags);
+            m_last_idx = m_btn.add(path, shortcut,
+                                   make_thunk<T, Method>(), instance, flags);
             return *this;
         }
 
         PopupMenu &add(const char *path, int shortcut = 0, int flags = 0)
         {
-            m_last_add_idx = m_menu_button.add(path, shortcut, nullptr, nullptr, flags);
+            m_last_idx = m_btn.add(path, shortcut, nullptr, nullptr, flags);
             return *this;
         }
 
         PopupMenu &add_packed(const char *str)
         {
-            m_last_add_idx = m_menu_button.add(str);
+            m_last_idx = m_btn.add(str);
             return *this;
         }
 
@@ -50,49 +44,44 @@ namespace mui
 
         PopupMenu &add_divider()
         {
-            if (m_last_add_idx >= 0)
-            {
-                m_menu_button.mode(m_last_add_idx, m_menu_button.mode(m_last_add_idx) | FL_MENU_DIVIDER);
-            }
+            if (m_last_idx >= 0)
+                m_btn.mode(m_last_idx, m_btn.mode(m_last_idx) | FL_MENU_DIVIDER);
             return *this;
         }
 
         template <typename T, void (T::*Method)()>
-        PopupMenu &add_toggle(const char *path, T *instance, int shortcut = 0, bool checked = false, int flags = 0)
+        PopupMenu &add_toggle(const char *path, T *instance,
+                              int shortcut = 0, bool checked = false, int flags = 0)
         {
-            int f = FL_MENU_TOGGLE | flags;
-            if (checked)
-                f |= FL_MENU_VALUE;
-            return add<T, Method>(path, instance, shortcut, f);
+            return add<T, Method>(path, instance, shortcut,
+                                  FL_MENU_TOGGLE | (checked ? FL_MENU_VALUE : 0) | flags);
         }
 
-        PopupMenu &add_toggle(const char *path, int shortcut = 0, bool checked = false, int flags = 0)
+        PopupMenu &add_toggle(const char *path,
+                              int shortcut = 0, bool checked = false, int flags = 0)
         {
-            int f = FL_MENU_TOGGLE | flags;
-            if (checked)
-                f |= FL_MENU_VALUE;
-            return add(path, shortcut, f);
-        }
-
-        template <typename T, void (T::*Method)()>
-        PopupMenu &add_radio(const char *path, T *instance, int shortcut = 0, bool checked = false, int flags = 0)
-        {
-            int f = FL_MENU_RADIO | flags;
-            if (checked)
-                f |= FL_MENU_VALUE;
-            return add<T, Method>(path, instance, shortcut, f);
-        }
-
-        PopupMenu &add_radio(const char *path, int shortcut = 0, bool checked = false, int flags = 0)
-        {
-            int f = FL_MENU_RADIO | flags;
-            if (checked)
-                f |= FL_MENU_VALUE;
-            return add(path, shortcut, f);
+            return add(path, shortcut,
+                       FL_MENU_TOGGLE | (checked ? FL_MENU_VALUE : 0) | flags);
         }
 
         template <typename T, void (T::*Method)()>
-        PopupMenu &add_inactive(const char *path, T *instance, int shortcut = 0, int flags = 0)
+        PopupMenu &add_radio(const char *path, T *instance,
+                             int shortcut = 0, bool checked = false, int flags = 0)
+        {
+            return add<T, Method>(path, instance, shortcut,
+                                  FL_MENU_RADIO | (checked ? FL_MENU_VALUE : 0) | flags);
+        }
+
+        PopupMenu &add_radio(const char *path,
+                             int shortcut = 0, bool checked = false, int flags = 0)
+        {
+            return add(path, shortcut,
+                       FL_MENU_RADIO | (checked ? FL_MENU_VALUE : 0) | flags);
+        }
+
+        template <typename T, void (T::*Method)()>
+        PopupMenu &add_inactive(const char *path, T *instance,
+                                int shortcut = 0, int flags = 0)
         {
             return add<T, Method>(path, instance, shortcut, FL_MENU_INACTIVE | flags);
         }
@@ -103,7 +92,8 @@ namespace mui
         }
 
         template <typename T, void (T::*Method)()>
-        PopupMenu &add_invisible(const char *path, T *instance, int shortcut = 0, int flags = 0)
+        PopupMenu &add_invisible(const char *path, T *instance,
+                                 int shortcut = 0, int flags = 0)
         {
             return add<T, Method>(path, instance, shortcut, FL_MENU_INVISIBLE | flags);
         }
@@ -114,86 +104,85 @@ namespace mui
         }
 
         template <typename T, void (T::*Method)()>
-        PopupMenu &insert(int index, const char *path, T *instance, int shortcut = 0, int flags = 0)
+        PopupMenu &insert(int index, const char *path, T *instance,
+                          int shortcut = 0, int flags = 0)
         {
-            auto thunk = [](Fl_Widget *, void *data)
-            {
-                (static_cast<T *>(data)->*Method)();
-            };
-            m_last_add_idx = m_menu_button.insert(index, path, shortcut, thunk, instance, flags);
+            m_last_idx = m_btn.insert(index, path, shortcut,
+                                      make_thunk<T, Method>(), instance, flags);
             return *this;
         }
 
-        PopupMenu &insert(int index, const char *path, int shortcut = 0, int flags = 0)
+        PopupMenu &insert(int index, const char *path,
+                          int shortcut = 0, int flags = 0)
         {
-            m_last_add_idx = m_menu_button.insert(index, path, shortcut, nullptr, nullptr, flags);
+            m_last_idx = m_btn.insert(index, path, shortcut, nullptr, nullptr, flags);
             return *this;
         }
 
         PopupMenu &replace(int index, const char *text)
         {
-            m_menu_button.replace(index, text);
+            m_btn.replace(index, text);
             return *this;
         }
-
         PopupMenu &remove(int index)
         {
-            m_menu_button.remove(index);
+            m_btn.remove(index);
             return *this;
         }
-
         PopupMenu &clear()
         {
-            m_menu_button.clear();
+            m_btn.clear();
             return *this;
         }
-
         PopupMenu &clear_submenu(int index)
         {
-            m_menu_button.clear_submenu(index);
+            m_btn.clear_submenu(index);
             return *this;
         }
 
         PopupMenu &mode(int index, int fl)
         {
-            m_menu_button.mode(index, fl);
+            m_btn.mode(index, fl);
             return *this;
         }
+        [[nodiscard]] int mode(int index) const { return m_btn.mode(index); }
 
-        int mode(int index) const
-        {
-            return m_menu_button.mode(index);
-        }
-
-        int size() const
-        {
-            return m_menu_button.size();
-        }
-
-        const char *text(int index) const
-        {
-            return m_menu_button.text(index);
-        }
+        [[nodiscard]] int size() const { return m_btn.size(); }
+        [[nodiscard]] const char *text(int i) const { return m_btn.text(i); }
 
         const Fl_Menu_Item *show()
         {
-            m_menu_button.box(Theme::schemes::MENU_POPUP_BOX);
-            m_menu_button.color(ThemeManager::get_palette().bg_main);
-            m_menu_button.selection_color(ThemeManager::get_palette().selection);
-            m_menu_button.textcolor(fl_contrast(ThemeManager::get_palette().fg_main, ThemeManager::get_palette().bg_main));
-            return m_menu_button.popup();
+            prepare_theme();
+            return m_btn.popup();
         }
 
         const Fl_Menu_Item *show(int x, int y, const char *title = nullptr)
         {
-            m_menu_button.box(Theme::schemes::MENU_POPUP_BOX);
-            m_menu_button.color(ThemeManager::get_palette().bg_main);
-            m_menu_button.selection_color(ThemeManager::get_palette().selection);
-            m_menu_button.textcolor(fl_contrast(ThemeManager::get_palette().fg_main, ThemeManager::get_palette().bg_main));
-            const Fl_Menu_Item *m = m_menu_button.menu();
-            if (!m)
-                return nullptr;
-            return m->popup(x, y, title, m_menu_button.mvalue(), &m_menu_button);
+            prepare_theme();
+            const Fl_Menu_Item *m = m_btn.menu();
+            return m ? m->popup(x, y, title, m_btn.mvalue(), &m_btn) : nullptr;
+        }
+
+    private:
+        Fl_Menu_Button m_btn;
+        int m_last_idx = -1;
+
+        void prepare_theme()
+        {
+            const auto &p = ThemeManager::get_palette();
+            m_btn.box(Theme::schemes::MENU_POPUP_BOX);
+            m_btn.color(p.bg_main);
+            m_btn.selection_color(p.selection);
+            m_btn.textcolor(fl_contrast(p.fg_main, p.bg_main));
+        }
+
+        template <typename T, void (T::*Method)()>
+        [[nodiscard]] static Fl_Callback *make_thunk()
+        {
+            return [](Fl_Widget *, void *data)
+            {
+                (static_cast<T *>(data)->*Method)();
+            };
         }
     };
 }
