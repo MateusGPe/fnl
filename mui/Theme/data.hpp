@@ -36,7 +36,7 @@ namespace mui
         int choice_arrow_size = 8;
         int slider_track_height = 4;
         int slider_thumb_size = 16;
-        int slider_thumb_focus_halo_size = 24;
+        int slider_thumb_focus_halo_size = 20;
         float slider_thumb_hover_halo_opacity = 0.9f;
         int valueslider_gap = 4;
         int valueslider_input_width = 40;

@@ -24,6 +24,7 @@ namespace mui
         Tree(int x, int y, int w, int h, const char *l = nullptr)
             : policy::HoverTracker<policy::CallbackRouter<Fl_Tree>>(x, y, w, h, l)
         {
+            box(Theme::schemes::ROUNDED_INPUT_THIN_DOWN_BOX);
             connectorstyle(FL_TREE_CONNECTOR_NONE);
             marginleft(10);
             margintop(10);

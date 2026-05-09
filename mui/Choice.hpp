@@ -11,30 +11,37 @@ namespace mui
         Fl_Boxtype btn_box;
         Fl_Boxtype btn_down_box;
         bool is_pressed = false;
+        std::string last_choice;
 
         void draw() override
         {
             fl_push_clip(x(), y(), w(), h());
 
-            const auto& palette = mui::ThemeManager::get_palette();
+            const auto &palette = mui::ThemeManager::get_palette();
             Fl_Boxtype draw_b = is_pressed ? btn_down_box : btn_box;
             Fl_Color draw_c = is_pressed ? palette.bg_sec : palette.bg_main;
 
             if (!is_pressed && is_hovered && active_r())
             {
                 Fl_Boxtype hover_b = this->resolve_hover_box(btn_box);
-                if (hover_b != btn_box) draw_b = hover_b;
-                else draw_c = palette.bg_sec; // Assuming bg_sec is the hover color for Choice
+                if (hover_b != btn_box)
+                    draw_b = hover_b;
+                else
+                    draw_c = palette.bg_sec; // Assuming bg_sec is the hover color for Choice
             }
 
             fl_draw_box(draw_b, x(), y(), w(), h(), draw_c);
 
-            fl_color(active_r() ? textcolor() : fl_inactive(textcolor()));
-            fl_font(textfont(), textsize());
-            
-            if (const Fl_Menu_Item* m = mvalue()) { // mvalue() is from Fl_Menu_
-                fl_draw(m->text, x() + 6, y(), w() - 24, h(), FL_ALIGN_LEFT | FL_ALIGN_INSIDE);
+            if (const Fl_Menu_Item *m = mvalue())
+            { // mvalue() is from Fl_Menu_
+                if (last_choice != m->text)
+                {
+                    last_choice = m->text;
+                }
             }
+            fl_color(active_r() ? palette.fg_main : fl_inactive(palette.fg_main));
+            fl_font(textfont(), textsize());
+            fl_draw(last_choice.c_str(), x() + 6, y(), w() - 24, h(), FL_ALIGN_LEFT | FL_ALIGN_INSIDE);
 
             int arrow_x = x() + w() - 14;
             int arrow_y = y() + (h() - 6) / 2;
@@ -74,10 +81,10 @@ namespace mui
                     Fl::focus(this);
 
                 // Update colors for the dropdown menu before showing it
-                const auto& palette = mui::ThemeManager::get_palette();
+                const auto &palette = mui::ThemeManager::get_palette();
                 this->color(palette.bg_main);
                 this->selection_color(palette.selection);
-                this->textcolor(fl_contrast(palette.fg_main, palette.bg_main));
+                this->textcolor(palette.fg_main);
                 is_pressed = true;
                 redraw();
 

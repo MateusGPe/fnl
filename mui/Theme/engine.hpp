@@ -67,14 +67,18 @@ namespace mui
 
         inline void draw_box(int x, int y, int w, int h, const Gradient4 &grad, const core::FrameColors &fc, int inset, bool active, const ThemePalette &palette)
         {
-            if (palette.metrics.radius > 0) {
-                if (fc.out_top) {
+            if (palette.metrics.radius > 0)
+            {
+                if (fc.out_top)
+                {
                     fl_color(core::activated_color(fc.out_top, active));
                     fl_rounded_rectf(x, y, w, h, palette.metrics.radius);
                 }
                 core::draw_rounded_gradient_box(x + inset, y + inset, w - (inset * 2), h - (inset * 2), grad.t_start, grad.t_end, grad.b_start, grad.b_end, std::max(0, palette.metrics.radius - inset), active);
                 core::draw_rounded_frame_h(x, y, w, h, fc, palette.metrics.radius, active);
-            } else {
+            }
+            else
+            {
                 core::draw_smart_gradient_4(x + inset, y + inset, w - (inset * 2), h - (inset * 2), grad.t_start, grad.t_end, grad.b_start, grad.b_end, active);
                 core::draw_solid_frame(x, y, w, h, fc, active);
             }
@@ -86,7 +90,7 @@ namespace mui
             draw_box(x, y, w, h, grad, palette.btn_frame, 2, state.active, palette);
             if (state.focused)
             {
-                //draw_focus_ring(x, y, w, h, palette.bg_main, palette.metrics.focus_ring_opacity, palette.metrics.focus_ring_width, palette.metrics.radius);
+                // draw_focus_ring(x, y, w, h, palette.bg_main, palette.metrics.focus_ring_opacity, palette.metrics.focus_ring_width, palette.metrics.radius);
             }
         }
 

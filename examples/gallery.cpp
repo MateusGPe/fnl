@@ -30,6 +30,7 @@
 #include <FL/Fl_Box.H>
 #include <FL/Fl_Text_Buffer.H>
 #include <FL/fl_draw.H>
+#include <FL/Fl_Flex.H>
 
 class DemoTable : public Fl_Table
 {
@@ -121,7 +122,8 @@ public:
 
         for (const auto &named_palette : mui::get_theme_palettes())
         {
-            if (named_palette.name == name) {
+            if (named_palette.name == name)
+            {
                 mui::ThemeManager::set_palette(named_palette.palette);
             }
         }
@@ -180,67 +182,116 @@ public:
 
         mui::Tabs *tabs = new mui::Tabs(10, 40, 780, 550);
         {
-            Fl_Group *tab1 = new Fl_Group(10, 70, 780, 520, "Basic Controls");
+            Fl_Flex *tab1 = new Fl_Flex(10, 70, 780, 520, "Basic Controls");
+            tab1->type(Fl_Flex::VERTICAL);
+            tab1->margin(20, 20, 20, 20);
+            tab1->gap(10);
             {
-                int sy = 90;
-                Fl_Box *b1 = new Fl_Box(20, sy, 200, 20, "Buttons & Toggles");
+                Fl_Box *b1 = new Fl_Box(0, 0, 0, 0, "Buttons & Toggles");
                 b1->align(FL_ALIGN_LEFT | FL_ALIGN_INSIDE);
-                sy += 30;
+                tab1->fixed(b1, 20);
 
-                mui::Button *btn = new mui::Button(20, sy, 80, 30, "Button");
-                btn->callback(on_generic_click, this);
+                Fl_Flex *row1 = new Fl_Flex(Fl_Flex::HORIZONTAL);
+                row1->gap(10);
+                {
+                    mui::Button *btn = new mui::Button(0, 0, 0, 0, "Button");
+                    btn->callback(on_generic_click, this);
+                    row1->fixed(btn, 80);
 
-                mui::ReturnButton *rbtn = new mui::ReturnButton(110, sy, 80, 30, "Return");
-                rbtn->callback(on_generic_click, this);
+                    mui::ReturnButton *rbtn = new mui::ReturnButton(0, 0, 0, 0, "Return");
+                    rbtn->callback(on_generic_click, this);
+                    row1->fixed(rbtn, 80);
 
-                mui::LightButton *lbtn = new mui::LightButton(200, sy, 80, 30, "Light");
-                lbtn->value(1);
-                lbtn->callback(on_generic_toggle, this);
-                sy += 40;
+                    mui::LightButton *lbtn = new mui::LightButton(0, 0, 0, 0, "Light");
+                    lbtn->value(1);
+                    lbtn->callback(on_generic_toggle, this);
+                    row1->fixed(lbtn, 80);
 
-                Fl_Check_Button *cbtn = new Fl_Check_Button(20, sy, 80, 30, "Check");
-                cbtn->value(1);
-                cbtn->callback(on_generic_toggle, this);
+                    new Fl_Box(0, 0, 0, 0); // Spacer
+                }
+                row1->end();
+                tab1->fixed(row1, 30);
 
-                mui::RadioButton *rad1 = new mui::RadioButton(110, sy, 80, 30, "Radio 1");
-                rad1->value(1);
-                rad1->callback(on_generic_toggle, this);
+                Fl_Flex *row2 = new Fl_Flex(Fl_Flex::HORIZONTAL);
+                row2->gap(10);
+                {
+                    Fl_Check_Button *cbtn = new Fl_Check_Button(0, 0, 0, 0, "Check");
+                    cbtn->value(1);
+                    cbtn->callback(on_generic_toggle, this);
+                    row2->fixed(cbtn, 80);
 
-                mui::RadioButton *rad2 = new mui::RadioButton(200, sy, 80, 30, "Radio 2");
-                rad2->callback(on_generic_toggle, this);
-                sy += 50;
+                    mui::RadioButton *rad1 = new mui::RadioButton(0, 0, 0, 0, "Radio 1");
+                    rad1->value(1);
+                    rad1->callback(on_generic_toggle, this);
+                    row2->fixed(rad1, 80);
 
-                Fl_Box *b2 = new Fl_Box(20, sy, 200, 20, "Inputs & Choices");
+                    mui::RadioButton *rad2 = new mui::RadioButton(0, 0, 0, 0, "Radio 2");
+                    rad2->callback(on_generic_toggle, this);
+                    row2->fixed(rad2, 80);
+
+                    new Fl_Box(0, 0, 0, 0); // Spacer
+                }
+                row2->end();
+                tab1->fixed(row2, 30);
+
+                Fl_Box *b2 = new Fl_Box(0, 0, 0, 0, "Inputs & Choices");
                 b2->align(FL_ALIGN_LEFT | FL_ALIGN_INSIDE);
-                sy += 30;
+                tab1->fixed(b2, 20);
 
-                Fl_Input *inp = new Fl_Input(20, sy, 100, 30);
-                inp->value("Text");
+                Fl_Flex *row3 = new Fl_Flex(Fl_Flex::HORIZONTAL);
+                row3->gap(10);
+                {
+                    Fl_Input *inp = new Fl_Input(0, 0, 0, 0);
+                    inp->value("Text");
+                    row3->fixed(inp, 100);
 
-                Fl_Secret_Input *sinp = new Fl_Secret_Input(130, sy, 100, 30);
-                sinp->value("secret");
+                    Fl_Secret_Input *sinp = new Fl_Secret_Input(0, 0, 0, 0);
+                    sinp->value("secret");
+                    row3->fixed(sinp, 100);
 
-                mui::Choice *ch = new mui::Choice(240, sy, 120, 30);
-                ch->add("Option A|Option B|Option C");
-                ch->value(1);
-                ch->callback(on_generic_select, this);
-                sy += 50;
+                    mui::Choice *ch = new mui::Choice(0, 0, 0, 0);
+                    ch->add("Option A|Option B|Option C");
+                    ch->value(1);
+                    ch->callback(on_generic_select, this);
+                    row3->fixed(ch, 120);
 
-                Fl_Box *b3 = new Fl_Box(20, sy, 200, 20, "Sliders & Progress");
+                    new Fl_Box(0, 0, 0, 0); // Spacer
+                }
+                row3->end();
+                tab1->fixed(row3, 30);
+
+                Fl_Box *b3 = new Fl_Box(0, 0, 0, 0, "Sliders & Progress");
                 b3->align(FL_ALIGN_LEFT | FL_ALIGN_INSIDE);
-                sy += 30;
+                tab1->fixed(b3, 20);
 
-                mui::Slider *sl = new mui::Slider(20, sy, 200, 30);
-                sl->type(FL_HOR_SLIDER);
-                sl->bounds(0, 100);
-                sl->value(50);
-                sl->callback(on_generic_change, this);
-                sy += 40;
+                Fl_Flex *row4 = new Fl_Flex(Fl_Flex::HORIZONTAL);
+                {
+                    mui::Slider *sl = new mui::Slider(0, 0, 0, 0);
+                    sl->type(FL_HOR_SLIDER);
+                    sl->bounds(0, 100);
+                    sl->value(50);
+                    sl->callback(on_generic_change, this);
+                    row4->fixed(sl, 200);
 
-                mui::Progress *prg = new mui::Progress(20, sy, 200, 25);
-                prg->minimum(0);
-                prg->maximum(100);
-                prg->value(65);
+                    new Fl_Box(0, 0, 0, 0); // Spacer
+                }
+                row4->end();
+                tab1->fixed(row4, 30);
+
+                Fl_Flex *row5 = new Fl_Flex(Fl_Flex::HORIZONTAL);
+                {
+                    mui::Progress *prg = new mui::Progress(0, 0, 0, 0);
+                    prg->minimum(0);
+                    prg->maximum(100);
+                    prg->value(65);
+                    row5->fixed(prg, 200);
+
+                    new Fl_Box(0, 0, 0, 0); // Spacer
+                }
+                row5->end();
+                tab1->fixed(row5, 25);
+
+                new Fl_Box(0, 0, 0, 0); // Vertical spacer
             }
             tab1->end();
 
@@ -358,6 +409,7 @@ public:
                 tb->cols(5);
                 tb->row_header(1);
                 tb->col_header(1);
+                tb->redraw();
                 tb->end();
 
                 CustomCanvas *cc = new CustomCanvas(20, 310, 300, 200);
@@ -376,6 +428,7 @@ public:
                 fb->callback(on_file_chooser, this);
 
                 m_wizard_handle = new Fl_Wizard(20, 260, 400, 200);
+                m_wizard_handle->box(mui::Theme::schemes::ROUNDED_INPUT_THIN_DOWN_BOX);
                 {
                     Fl_Group *w1 = new Fl_Group(20, 260, 400, 200);
                     Fl_Box *b1 = new Fl_Box(20, 260, 400, 200, "Content for step 1\nStep 1");
