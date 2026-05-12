@@ -47,7 +47,7 @@ namespace mui
         void draw() override
         {
             const uchar d = damage();
-            const bool redraw_tabs = (d & (FL_DAMAGE_ALL | FL_DAMAGE_EXPOSE | FL_DAMAGE_SCROLL)) != 0;
+            const bool redraw_tabs = (d & ~FL_DAMAGE_CHILD) != 0;
 
             if (redraw_tabs)
             {

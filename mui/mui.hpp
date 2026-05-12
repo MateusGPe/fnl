@@ -17,3 +17,4 @@
 #include "Tree.hpp"
 #include "Tabs.hpp"
 #include "Progress.hpp"
+#include "Layout.hpp"

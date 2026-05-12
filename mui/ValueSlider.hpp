@@ -20,7 +20,8 @@ namespace mui
             textcolor(palette.fg_main);
 
             fl_push_clip(x(), y(), w(), h());
-            fl_draw_box(box(), x(), y(), w(), h(), color());
+            if (damage() & ~FL_DAMAGE_CHILD)
+                fl_draw_box(box(), x(), y(), w(), h(), color());
 
             const bool is_horiz = (type() == FL_HOR_SLIDER ||
                                    type() == FL_HOR_FILL_SLIDER ||
@@ -29,8 +30,9 @@ namespace mui
             const auto [tx, ty, tw, th, sx, sy, sw, sh] =
                 split_areas(is_horiz, palette);
 
-            fl_draw_box(Theme::schemes::ROUNDED_INPUT_THIN_DOWN_BOX,
-                        tx, ty, tw, th, palette.input_bg);
+            if (damage() & ~FL_DAMAGE_CHILD)
+                fl_draw_box(Theme::schemes::ROUNDED_INPUT_THIN_DOWN_BOX,
+                            tx, ty, tw, th, palette.input_bg);
 
             char buf[64];
             format(buf);

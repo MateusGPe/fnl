@@ -55,7 +55,8 @@ namespace mui
                     draw_c = palette.bg_sec;
             }
 
-            fl_draw_box(draw_b, x(), y(), w(), h(), draw_c);
+            if (damage() & ~FL_DAMAGE_CHILD)
+                fl_draw_box(draw_b, x(), y(), w(), h(), draw_c);
 
             if (const Fl_Menu_Item *m = mvalue())
                 m_last_label = m->text ? m->text : "";

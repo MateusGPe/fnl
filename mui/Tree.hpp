@@ -21,7 +21,7 @@ namespace mui
         }
 
     public:
-        Tree(int x, int y, int w, int h, const char *l = nullptr)
+        Tree(int x=0, int y=0, int w=0, int h=0, const char *l = nullptr)
             : policy::HoverTracker<policy::CallbackRouter<Fl_Tree>>(x, y, w, h, l)
         {
             box(Theme::schemes::ROUNDED_INPUT_THIN_DOWN_BOX);

@@ -25,7 +25,7 @@ public:
 class ImageViewerApp
 {
 private:
-    Fl_Window *m_win = nullptr;
+    Fl_Double_Window *m_win = nullptr;
     mui::ImageViewer *m_viewer = nullptr;
     LayerBrowser *m_layer_list = nullptr;
     Fl_Output *m_status_zoom_handle = nullptr;
@@ -144,7 +144,6 @@ public:
         {
             if (named_palette.name == theme_name)
             {
-                
                 mui::ThemeManager::set_palette(named_palette.palette);
                 break;
             }
@@ -541,7 +540,7 @@ public:
 
     void build_ui()
     {
-        m_win = new Fl_Window(1200, 800, "MUI Image Compositor");
+        m_win = new Fl_Double_Window(1200, 800, "MUI Image Compositor");
         m_win->begin();
 
         m_viewer = new mui::ImageViewer(300, 30, 900, 745);

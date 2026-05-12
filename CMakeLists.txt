@@ -19,7 +19,7 @@ set(FLTK_OPTION_SVG
     ON
     CACHE BOOL "Enable SVG support for Fl_Theme")
 set(FLTK_OPTION_CAIRO_WINDOW
-    ON
+    OFF
     CACHE BOOL "Use CMake for FLTK build")
 
 FetchContent_Declare(

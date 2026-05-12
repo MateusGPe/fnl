@@ -41,8 +41,11 @@ namespace mui
                 }
             }
 
-            fl_draw_box(FL_FLAT_BOX, this->x(), this->y(), this->w(), this->h(), palette.bg_main);
-            fl_draw_box(draw_b, this->x(), this->y(), this->w(), this->h(), draw_c);
+            if (this->damage() & ~FL_DAMAGE_CHILD)
+            {
+                fl_draw_box(FL_FLAT_BOX, this->x(), this->y(), this->w(), this->h(), palette.bg_main);
+                fl_draw_box(draw_b, this->x(), this->y(), this->w(), this->h(), draw_c);
+            }
 
             if constexpr (requires { this->is_hovered; })
             {

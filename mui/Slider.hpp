@@ -19,7 +19,8 @@ namespace mui
             labelcolor(palette.fg_main);
 
             fl_push_clip(x(), y(), w(), h());
-            fl_draw_box(box(), x(), y(), w(), h(), color());
+            if (damage() & ~FL_DAMAGE_CHILD)
+                fl_draw_box(box(), x(), y(), w(), h(), color());
 
             const bool is_horiz = (type() == FL_HOR_SLIDER ||
                                    type() == FL_HOR_FILL_SLIDER ||

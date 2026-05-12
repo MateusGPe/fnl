@@ -45,7 +45,8 @@ namespace mui
 
             fl_push_clip(x(), y(), w(), h());
 
-            fl_draw_box(FL_FLAT_BOX, x(), y(), w(), h(), color());
+            if (damage() & ~FL_DAMAGE_CHILD)
+                fl_draw_box(FL_FLAT_BOX, x(), y(), w(), h(), color());
 
             const double range = maximum() - minimum();
             const double val = (range != 0.0)
