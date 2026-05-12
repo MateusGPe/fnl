@@ -13,7 +13,7 @@ namespace mui
     class ImageViewer : public InternalImageViewer
     {
     public:
-        explicit ImageViewer(int x = 0, int y = 0, int w = 0, int h = 0) : InternalImageViewer(x, y, w, h)
+        explicit ImageViewer(int x = 0, int y = 0, int w = 0, int h = 0, const char *label = nullptr) : InternalImageViewer(x, y, w, h)
         {
         }
         template <typename T, void (T::*Method)()>
