@@ -45,69 +45,67 @@ namespace mui
 
     public:
         explicit FluentBuilderBase(T *widget) : m_widget(widget) {}
-
-#define MUI_BUILDER_METHOD(MethodName)                                  \
-        template <typename... Args>                                     \
-        std::shared_ptr<Derived> MethodName(Args &&...args)             \
-        {                                                               \
-            m_widget->MethodName(std::forward<Args>(args)...);          \
-            return this->shared_from_this();                            \
-        }
+// MUI_BUILDER_METHOD
+#define MBM(MethodName)                                    \
+    template <typename... Args>                            \
+    std::shared_ptr<Derived> MethodName(Args &&...args)    \
+    {                                                      \
+        m_widget->MethodName(std::forward<Args>(args)...); \
+        return this->shared_from_this();                   \
+    }
 
         // Common Fl_Widget methods
-        MUI_BUILDER_METHOD(activate)
-        MUI_BUILDER_METHOD(active)
-        MUI_BUILDER_METHOD(align)
-        MUI_BUILDER_METHOD(box)
-        MUI_BUILDER_METHOD(callback)
-        MUI_BUILDER_METHOD(clear_active)
-        MUI_BUILDER_METHOD(clear_output)
-        MUI_BUILDER_METHOD(clear_visible)
-        MUI_BUILDER_METHOD(clear_visible_focus)
-        MUI_BUILDER_METHOD(color)
-        MUI_BUILDER_METHOD(copy_label)
-        MUI_BUILDER_METHOD(copy_tooltip)
-        MUI_BUILDER_METHOD(deactivate)
-        MUI_BUILDER_METHOD(deimage)
-        MUI_BUILDER_METHOD(hide)
-        MUI_BUILDER_METHOD(image)
-        MUI_BUILDER_METHOD(label)
-        MUI_BUILDER_METHOD(labelcolor)
-        MUI_BUILDER_METHOD(labelfont)
-        MUI_BUILDER_METHOD(labelsize)
-        MUI_BUILDER_METHOD(labeltype)
-        MUI_BUILDER_METHOD(output)
-        MUI_BUILDER_METHOD(position)
-        MUI_BUILDER_METHOD(resize)
-        MUI_BUILDER_METHOD(selection_color)
-        MUI_BUILDER_METHOD(set_active)
-        MUI_BUILDER_METHOD(set_output)
-        MUI_BUILDER_METHOD(set_visible)
-        MUI_BUILDER_METHOD(set_visible_focus)
-        MUI_BUILDER_METHOD(show)
-        MUI_BUILDER_METHOD(size)
-        MUI_BUILDER_METHOD(tooltip)
-        MUI_BUILDER_METHOD(type)
-        MUI_BUILDER_METHOD(user_data)
-        MUI_BUILDER_METHOD(visible)
-        MUI_BUILDER_METHOD(visible_focus)
-        MUI_BUILDER_METHOD(when)
-
+        MBM(activate)
+        MBM(active)
+        MBM(align)
+        MBM(box)
+        MBM(callback)
+        MBM(clear_active)
+        MBM(clear_output)
+        MBM(clear_visible)
+        MBM(clear_visible_focus)
+        MBM(color)
+        MBM(copy_label)
+        MBM(copy_tooltip)
+        MBM(deactivate)
+        MBM(deimage)
+        MBM(hide)
+        MBM(image)
+        MBM(label)
+        MBM(labelcolor)
+        MBM(labelfont)
+        MBM(labelsize)
+        MBM(labeltype)
+        MBM(output)
+        MBM(position)
+        MBM(resize)
+        MBM(selection_color)
+        MBM(set_active)
+        MBM(set_output)
+        MBM(set_visible)
+        MBM(set_visible_focus)
+        MBM(show)
+        MBM(size)
+        MBM(tooltip)
+        MBM(type)
+        MBM(user_data)
+        MBM(visible)
+        MBM(visible_focus)
+        MBM(when)
         // Common Valuator / Input methods
-        MUI_BUILDER_METHOD(bounds)
-        MUI_BUILDER_METHOD(maximum)
-        MUI_BUILDER_METHOD(minimum)
-        MUI_BUILDER_METHOD(step)
-        MUI_BUILDER_METHOD(value)
-
+        MBM(bounds)
+        MBM(maximum)
+        MBM(minimum)
+        MBM(step)
+        MBM(value)
         // Common Container / Browser methods
-        MUI_BUILDER_METHOD(add)
-        MUI_BUILDER_METHOD(clear)
-        MUI_BUILDER_METHOD(insert)
-        MUI_BUILDER_METHOD(remove)
-        MUI_BUILDER_METHOD(resizable)
+        MBM(add)
+        MBM(clear)
+        MBM(insert)
+        MBM(remove)
+        MBM(resizable)
 
-#undef MUI_BUILDER_METHOD
+#undef MBM
 
         T *end() { return m_widget; }
     };
@@ -171,6 +169,7 @@ namespace mui
         auto *box = make<Fl_Box>(text);
         box->align(FL_ALIGN_LEFT | FL_ALIGN_INSIDE);
         box->labelfont(FL_HELVETICA_BOLD);
+        box->box(FL_FLAT_BOX);
         return box;
     }
 

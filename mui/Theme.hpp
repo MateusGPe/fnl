@@ -58,7 +58,7 @@ namespace mui
         static void register_boxtypes();
 
     private:
-        static inline ThemePalette *current_palette_ = &DARK_PALETTE;
+        static inline ThemePalette *current_palette_ = &BLUE_LIGHT_PALETTE;
 
         static void apply_fltk_globals(const ThemePalette &p)
         {
@@ -272,7 +272,7 @@ namespace mui
             Fl::set_font(FL_HELVETICA_ITALIC, "Noto Sans Italic");
             Fl::set_font(FL_HELVETICA_BOLD_ITALIC, "Noto Sans Bold Italic");
 #endif
-            ThemeManager::apply_theme(DARK_PALETTE);
+            ThemeManager::apply_theme(BLUE_LIGHT_PALETTE);
             apply_global_settings();
         }
     }

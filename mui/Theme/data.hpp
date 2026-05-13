@@ -84,7 +84,7 @@ namespace mui
 
     //
 
-    inline ThemePalette DARK_PALETTE = {
+    inline ThemePalette BLUE_LIGHT_PALETTE = {
         frgb(240, 240, 240),
         frgb(255, 255, 255),
         frgb(30, 30, 30),
@@ -110,7 +110,7 @@ namespace mui
         {frgb(150, 150, 150), frgb(150, 150, 150), frgb(150, 150, 150), 0, 0, 0, 0, 0, nullptr},
         frgb(255, 255, 255),
         {frgb(180, 180, 180), frgb(180, 180, 180), frgb(180, 180, 180), 0, 0, 0, 0, 0, nullptr},
-        frgb(0, 120, 215),
+        frgb(100, 180, 255),
         frgb(30, 30, 30),
         frgb(150, 150, 150),
         frgb(0, 120, 215),
@@ -148,16 +148,16 @@ namespace mui
     };
 
     inline ThemePalette FUTURISTIC_DARK_ORANGE_PALETTE = {
-        frgb(20, 20, 35),
-        frgb(30, 30, 45),
-        frgb(230, 230, 240),
-        frgb(80, 80, 100),
-        frgb(255, 150, 50),
-        frgb(255, 0, 128),
-        frgb(0, 255, 128),
-        frgb(30, 30, 45),
-        frgb(40, 40, 55),
-        frgb(230, 230, 240),
+        frgb(20, 20, 35),    // bg_main
+        frgb(30, 30, 45),    // bg_sec
+        frgb(230, 230, 240), // fg_main
+        frgb(80, 80, 100),   // inactive
+        frgb(255, 150, 50),  // selection
+        frgb(255, 0, 128),   // error_main
+        frgb(0, 255, 128),   // success_main
+        frgb(30, 30, 45),    // free_bg
+        frgb(40, 40, 55),    // tt_bg
+        frgb(230, 230, 240), // tt_fg
         {frgb(50, 50, 70), frgb(40, 40, 60), frgb(35, 35, 55), frgb(30, 30, 50)},
         {frgb(80, 80, 100), frgb(80, 80, 100), frgb(80, 80, 100), 0, 0, 0, 0, 0, nullptr},
         {frgb(90, 90, 130), frgb(70, 70, 110), frgb(65, 65, 105), frgb(55, 55, 95)},
@@ -206,7 +206,93 @@ namespace mui
         frgb(107, 178, 160),
         frgb(160, 174, 173),
     };
-
+    inline ThemePalette PRO_STUDIO_PALETTE = {
+        frgb(30, 30, 30),    // bg_main
+        frgb(37, 37, 38),    // bg_sec
+        frgb(204, 204, 204), // fg_main
+        frgb(104, 104, 104), // inactive
+        frgb(0, 122, 204),   // selection
+        frgb(244, 71, 71),   // error_main
+        frgb(75, 181, 67),   // success_main
+        frgb(30, 30, 30),    // free_bg
+        frgb(37, 37, 38),    // tt_bg
+        frgb(204, 204, 204), // tt_fg
+        {frgb(60, 60, 60), frgb(60, 60, 60), frgb(50, 50, 50), frgb(50, 50, 50)},
+        {frgb(45, 45, 45), frgb(45, 45, 45), frgb(45, 45, 45), 0, 0, 0, 0, 0, nullptr},
+        {frgb(75, 75, 75), frgb(75, 75, 75), frgb(65, 65, 65), frgb(65, 65, 65)},
+        {frgb(45, 45, 45), frgb(45, 45, 45), frgb(45, 45, 45), 0, 0, 0, 0, 0, nullptr},
+        {frgb(40, 40, 40), frgb(40, 40, 40), frgb(40, 40, 40), frgb(40, 40, 40)},
+        {frgb(0, 122, 204), frgb(0, 122, 204), frgb(0, 122, 204), 0, 0, 0, 0, 0, nullptr},
+        {frgb(0, 122, 204), frgb(0, 122, 204), frgb(0, 102, 184), frgb(0, 102, 184)},
+        {frgb(0, 90, 158), frgb(0, 90, 158), frgb(0, 90, 158), 0, 0, 0, 0, 0, nullptr},
+        {frgb(60, 60, 60), frgb(60, 60, 60), frgb(60, 60, 60), 0, 0, 0, 0, 0, nullptr},
+        {frgb(60, 60, 60), frgb(60, 60, 60), frgb(60, 60, 60), 0, 0, 0, 0, 0, nullptr},
+        frgb(25, 25, 25), // input_bg
+        {frgb(60, 60, 60), frgb(60, 60, 60), frgb(60, 60, 60), 0, 0, 0, 0, 0, nullptr},
+        frgb(100, 100, 140),   // focus_ring
+        frgb(204, 204, 204), // toggle_tick
+        frgb(104, 104, 104), // toggle_border
+        frgb(37, 37, 38),    // slider_track
+        frgb(204, 204, 204)  // spinner_arrow
+    };
+    inline ThemePalette NORD_MINIMAL_PALETTE = {
+        frgb(46, 52, 64),    // bg_main
+        frgb(59, 66, 82),    // bg_sec
+        frgb(216, 222, 233), // fg_main
+        frgb(76, 86, 106),   // inactive
+        frgb(136, 192, 208), // selection
+        frgb(191, 97, 106),  // error_main
+        frgb(163, 190, 140), // success_main
+        frgb(46, 52, 64),    // free_bg
+        frgb(59, 66, 82),    // tt_bg
+        frgb(216, 222, 233), // tt_fg
+        {frgb(67, 76, 94), frgb(67, 76, 94), frgb(59, 66, 82), frgb(59, 66, 82)},
+        {frgb(46, 52, 64), frgb(46, 52, 64), frgb(46, 52, 64), 0, 0, 0, 0, 0, nullptr},
+        {frgb(76, 86, 106), frgb(76, 86, 106), frgb(67, 76, 94), frgb(67, 76, 94)},
+        {frgb(46, 52, 64), frgb(46, 52, 64), frgb(46, 52, 64), 0, 0, 0, 0, 0, nullptr},
+        {frgb(46, 52, 64), frgb(46, 52, 64), frgb(46, 52, 64), frgb(46, 52, 64)},
+        {frgb(136, 192, 208), frgb(136, 192, 208), frgb(136, 192, 208), 0, 0, 0, 0, 0, nullptr},
+        {frgb(129, 161, 193), frgb(129, 161, 193), frgb(129, 161, 193), frgb(129, 161, 193)},
+        {frgb(94, 129, 172), frgb(94, 129, 172), frgb(94, 129, 172), 0, 0, 0, 0, 0, nullptr},
+        {frgb(67, 76, 94), frgb(67, 76, 94), frgb(67, 76, 94), 0, 0, 0, 0, 0, nullptr},
+        {frgb(67, 76, 94), frgb(67, 76, 94), frgb(67, 76, 94), 0, 0, 0, 0, 0, nullptr},
+        frgb(46, 52, 64), // input_bg
+        {frgb(67, 76, 94), frgb(67, 76, 94), frgb(67, 76, 94), 0, 0, 0, 0, 0, nullptr},
+        frgb(94, 129, 172),  // focus_ring
+        frgb(216, 222, 233), // toggle_tick
+        frgb(76, 86, 106),   // toggle_border
+        frgb(59, 66, 82),    // slider_track
+        frgb(216, 222, 233)  // spinner_arrow
+    };
+    inline ThemePalette CLEAN_LIGHT_PALETTE = {
+        frgb(249, 250, 251), // bg_main
+        frgb(255, 255, 255), // bg_sec
+        frgb(17, 24, 39),    // fg_main
+        frgb(156, 163, 175), // inactive
+        frgb(76, 126, 236),  // selection
+        frgb(220, 38, 38),   // error_main
+        frgb(22, 163, 74),   // success_main
+        frgb(249, 250, 251), // free_bg
+        frgb(255, 255, 255), // tt_bg
+        frgb(17, 24, 39),    // tt_fg
+        {frgb(255, 255, 255), frgb(255, 255, 255), frgb(243, 244, 246), frgb(243, 244, 246)},
+        {frgb(209, 213, 219), frgb(209, 213, 219), frgb(209, 213, 219), 0, 0, 0, 0, 0, nullptr},
+        {frgb(249, 250, 251), frgb(249, 250, 251), frgb(229, 231, 235), frgb(229, 231, 235)},
+        {frgb(156, 163, 175), frgb(156, 163, 175), frgb(156, 163, 175), 0, 0, 0, 0, 0, nullptr},
+        {frgb(229, 231, 235), frgb(229, 231, 235), frgb(229, 231, 235), frgb(229, 231, 235)},
+        {frgb(37, 99, 235), frgb(37, 99, 235), frgb(37, 99, 235), 0, 0, 0, 0, 0, nullptr},
+        {frgb(59, 130, 246), frgb(59, 130, 246), frgb(37, 99, 235), frgb(37, 99, 235)},
+        {frgb(29, 78, 216), frgb(29, 78, 216), frgb(29, 78, 216), 0, 0, 0, 0, 0, nullptr},
+        {frgb(229, 231, 235), frgb(229, 231, 235), frgb(229, 231, 235), 0, 0, 0, 0, 0, nullptr},
+        {frgb(209, 213, 219), frgb(209, 213, 219), frgb(209, 213, 219), 0, 0, 0, 0, 0, nullptr},
+        frgb(255, 255, 255), // input_bg
+        {frgb(209, 213, 219), frgb(209, 213, 219), frgb(209, 213, 219), 0, 0, 0, 0, 0, nullptr},
+        frgb(0, 0, 0),  // focus_ring
+        frgb(17, 24, 39),    // toggle_tick
+        frgb(156, 163, 175), // toggle_border
+        frgb(229, 231, 235), // slider_track
+        frgb(17, 24, 39)     // spinner_arrow
+    };
     struct NamedPalette
     {
         std::string name;
@@ -216,10 +302,13 @@ namespace mui
     inline std::vector<NamedPalette> &get_theme_palettes()
     {
         static std::vector<NamedPalette> palettes = {
-            {"Dark", DARK_PALETTE},
+            {"Blue Light", BLUE_LIGHT_PALETTE},
             {"Futuristic Dark", FUTURISTIC_DARK_PALETTE},
             {"Futuristic Dark Orange", FUTURISTIC_DARK_ORANGE_PALETTE},
             {"Slate Teal", SLATE_TEAL_PALETTE},
+            {"Pro Studio", PRO_STUDIO_PALETTE},
+            {"Nord Minimal", NORD_MINIMAL_PALETTE},
+            {"Clean Light", CLEAN_LIGHT_PALETTE},
         };
         return palettes;
     }
