@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <cstdio>
+#include <vector>
 #include <mui.hpp>
 #include <FL/Fl_Window.H>
 #include <mui/Theme/data.hpp>
@@ -30,7 +31,6 @@
 #include <FL/Fl_Box.H>
 #include <FL/Fl_Text_Buffer.H>
 #include <FL/fl_draw.H>
-#include <FL/Fl_Flex.H>
 
 class DemoTable : public Fl_Table
 {
@@ -63,7 +63,10 @@ protected:
     }
 
 public:
-    DemoTable(int X, int Y, int W, int H, const char *l = 0) : Fl_Table(X, Y, W, H, l) {}
+    DemoTable(int X, int Y, int W, int H, const char *l = 0) : Fl_Table(X, Y, W, H, l)
+    {
+        end();
+    }
 };
 
 class CustomCanvas : public Fl_Widget
@@ -86,10 +89,11 @@ public:
 class WidgetGallery
 {
 private:
-    Fl_Window *m_win;
+    Fl_Double_Window *m_win;
     Fl_Text_Buffer *m_editor_buffer;
     Fl_Wizard *m_wizard_handle = nullptr;
     Fl_Menu_Bar *m_menu_bar_handle = nullptr;
+    std::vector<std::string> m_theme_strings;
 
 public:
     WidgetGallery()
@@ -159,310 +163,295 @@ public:
 
     void build_ui()
     {
-        m_win = new Fl_Window(800, 600, "MUI Widget Gallery");
+        m_win = new Fl_Double_Window(800, 600, "MUI Widget Gallery");
         m_win->begin();
 
         m_menu_bar_handle = new Fl_Menu_Bar(0, 0, 800, 30);
-        m_menu_bar_handle->add("File/Quit", 0, on_quit, this);
-        m_menu_bar_handle->add("Help/About");
-
-        m_menu_bar_handle->add("Theme", 0, 0, 0, FL_SUBMENU);
-        bool first = true;
-        for (const auto &named_palette : mui::get_theme_palettes())
         {
-            std::string path = "Theme/" + named_palette.name;
-            int flags = FL_MENU_RADIO;
-            if (first)
+            m_menu_bar_handle->add("File/Quit", 0, on_quit, this);
+            m_menu_bar_handle->add("Help/About");
+
+            m_menu_bar_handle->add("Theme", 0, 0, 0, FL_SUBMENU);
+            bool first = true;
+            for (const auto &named_palette : mui::get_theme_palettes())
             {
-                flags |= FL_MENU_VALUE;
-                first = false;
+                m_theme_strings.push_back("Theme/" + named_palette.name);
+                int flags = FL_MENU_RADIO;
+                if (first)
+                {
+                    flags |= FL_MENU_VALUE;
+                    first = false;
+                }
+                m_menu_bar_handle->add(m_theme_strings.back().c_str(), 0, on_theme_menu_select, this, flags);
             }
-            m_menu_bar_handle->add(path.c_str(), 0, on_theme_menu_select, this, flags);
         }
 
         mui::Tabs *tabs = new mui::Tabs(10, 40, 780, 550);
-        {
-            Fl_Flex *tab1 = new Fl_Flex(10, 70, 780, 520, "Basic Controls");
-            tab1->type(Fl_Flex::VERTICAL);
-            tab1->margin(20, 20, 20, 20);
-            tab1->gap(10);
-            {
-                Fl_Box *b1 = new Fl_Box(0, 0, 0, 0, "Buttons & Toggles");
-                b1->align(FL_ALIGN_LEFT | FL_ALIGN_INSIDE);
-                tab1->fixed(b1, 20);
-
-                Fl_Flex *row1 = new Fl_Flex(Fl_Flex::HORIZONTAL);
-                row1->gap(10);
-                {
-                    mui::Button *btn = new mui::Button(0, 0, 0, 0, "Button");
-                    btn->callback(on_generic_click, this);
-                    row1->fixed(btn, 80);
-
-                    mui::ReturnButton *rbtn = new mui::ReturnButton(0, 0, 0, 0, "Return");
-                    rbtn->callback(on_generic_click, this);
-                    row1->fixed(rbtn, 80);
-
-                    mui::LightButton *lbtn = new mui::LightButton(0, 0, 0, 0, "Light");
-                    lbtn->value(1);
-                    lbtn->callback(on_generic_toggle, this);
-                    row1->fixed(lbtn, 80);
-
-                    new Fl_Box(0, 0, 0, 0);
-                }
-                row1->end();
-                tab1->fixed(row1, 30);
-
-                Fl_Flex *row2 = new Fl_Flex(Fl_Flex::HORIZONTAL);
-                row2->gap(10);
-                {
-                    Fl_Check_Button *cbtn = new Fl_Check_Button(0, 0, 0, 0, "Check");
-                    cbtn->value(1);
-                    cbtn->callback(on_generic_toggle, this);
-                    row2->fixed(cbtn, 80);
-
-                    mui::RadioButton *rad1 = new mui::RadioButton(0, 0, 0, 0, "Radio 1");
-                    rad1->value(1);
-                    rad1->callback(on_generic_toggle, this);
-                    row2->fixed(rad1, 80);
-
-                    mui::RadioButton *rad2 = new mui::RadioButton(0, 0, 0, 0, "Radio 2");
-                    rad2->callback(on_generic_toggle, this);
-                    row2->fixed(rad2, 80);
-
-                    new Fl_Box(0, 0, 0, 0);
-                }
-                row2->end();
-                tab1->fixed(row2, 30);
-
-                Fl_Box *b2 = new Fl_Box(0, 0, 0, 0, "Inputs & Choices");
-                b2->align(FL_ALIGN_LEFT | FL_ALIGN_INSIDE);
-                tab1->fixed(b2, 20);
-
-                Fl_Flex *row3 = new Fl_Flex(Fl_Flex::HORIZONTAL);
-                row3->gap(10);
-                {
-                    Fl_Input *inp = new Fl_Input(0, 0, 0, 0);
-                    inp->value("Text");
-                    row3->fixed(inp, 100);
-
-                    Fl_Secret_Input *sinp = new Fl_Secret_Input(0, 0, 0, 0);
-                    sinp->value("secret");
-                    row3->fixed(sinp, 100);
-
-                    mui::Choice *ch = new mui::Choice(0, 0, 0, 0);
-                    ch->add("Option A|Option B|Option C");
-                    ch->value(1);
-                    ch->callback(on_generic_select, this);
-                    row3->fixed(ch, 120);
-
-                    new Fl_Box(0, 0, 0, 0);
-                }
-                row3->end();
-                tab1->fixed(row3, 30);
-
-                Fl_Box *b3 = new Fl_Box(0, 0, 0, 0, "Sliders & Progress");
-                b3->align(FL_ALIGN_LEFT | FL_ALIGN_INSIDE);
-                tab1->fixed(b3, 20);
-
-                Fl_Flex *row4 = new Fl_Flex(Fl_Flex::HORIZONTAL);
-                {
-                    mui::Slider *sl = new mui::Slider(0, 0, 0, 0);
-                    sl->type(FL_HOR_SLIDER);
-                    sl->bounds(0, 100);
-                    sl->value(50);
-                    sl->callback(on_generic_change, this);
-                    row4->fixed(sl, 200);
-
-                    new Fl_Box(0, 0, 0, 0);
-                }
-                row4->end();
-                tab1->fixed(row4, 30);
-
-                Fl_Flex *row5 = new Fl_Flex(Fl_Flex::HORIZONTAL);
-                {
-                    mui::Progress *prg = new mui::Progress(0, 0, 0, 0);
-                    prg->minimum(0);
-                    prg->maximum(100);
-                    prg->value(65);
-                    row5->fixed(prg, 200);
-
-                    new Fl_Box(0, 0, 0, 0);
-                }
-                row5->end();
-                tab1->fixed(row5, 25);
-                row1->layout();
-                row2->layout();
-                row3->layout();
-                row4->layout();
-                row5->layout();
-
-                new Fl_Box(0, 0, 0, 0);
-            }
-            tab1->end();
-
-            Fl_Group *tab2 = new Fl_Group(10, 70, 780, 520, "Valuators");
-            tab2->hide();
-            {
-                int sy = 90;
-                auto make_row = [&](Fl_Widget *w, const char *label, int x, int y)
-                {
-                    Fl_Box *l = new Fl_Box(x, y, 100, 30, label);
-                    l->align(FL_ALIGN_LEFT | FL_ALIGN_INSIDE);
-                    w->resize(x + 110, y, 150, 30);
-                    w->callback(on_generic_change, this);
-                };
-
-                Fl_Value_Input *vi = new Fl_Value_Input(0, 0, 0, 0);
-                vi->bounds(0, 1000);
-                vi->step(1);
-                vi->value(123);
-                make_row(vi, "ValueInput:", 20, sy);
-                sy += 40;
-
-                mui::Spinner *sp = new mui::Spinner(0, 0, 0, 0);
-                sp->minimum(0);
-                sp->maximum(50);
-                sp->step(1);
-                sp->value(10);
-                make_row(sp, "Spinner:", 20, sy);
-                sy += 40;
-
-                Fl_Counter *ct = new Fl_Counter(0, 0, 0, 0);
-                ct->bounds(0, 20);
-                ct->step(1, 5);
-                ct->value(5);
-                make_row(ct, "Counter:", 20, sy);
-                sy += 40;
-
-                Fl_Adjuster *adj = new Fl_Adjuster(0, 0, 0, 0);
-                adj->bounds(-1, 1);
-                adj->value(0);
-                make_row(adj, "Adjuster:", 20, sy);
-                sy += 40;
-
-                mui::ValueSlider *vs = new mui::ValueSlider(0, 0, 0, 0);
-                vs->type(FL_HOR_SLIDER);
-                vs->bounds(0, 100);
-                vs->value(25);
-                make_row(vs, "ValueSlider:", 20, sy);
-                sy += 60;
-
-                Fl_Dial *dial = new Fl_Dial(20, sy, 60, 60, "Dial");
-                dial->bounds(0, 360);
-                dial->value(90);
-                dial->callback(on_generic_change, this);
-
-                Fl_Roller *roller = new Fl_Roller(100, sy, 30, 60, "Roller");
-                roller->bounds(0, 100);
-                roller->value(30);
-                roller->step(0.1);
-                roller->callback(on_generic_change, this);
-            }
-            tab2->end();
-
-            Fl_Group *tab3 = new Fl_Group(10, 70, 780, 520, "Data Display");
-            tab3->hide();
-            {
-                int sy = 90;
-                Fl_Output *out = new Fl_Output(20, sy, 100, 30);
-                out->value("Read-only");
-
-                Fl_Value_Output *vout = new Fl_Value_Output(130, sy, 80, 30);
-                vout->value(3.14159);
-                sy += 50;
-
-                Fl_Multiline_Output *mout = new Fl_Multiline_Output(20, sy, 200, 60);
-                mout->value("Line 1\nLine 2\nLine 3");
-                sy += 80;
-
-                mui::Browser *br = new mui::Browser(20, sy, 150, 150);
-                br->type(FL_MULTI_BROWSER);
-                br->add("Item 1");
-                br->add("Item 2");
-                br->add("Item 3");
-                br->callback(on_generic_select, this);
-
-                mui::Tree *tr = new mui::Tree(180, sy, 200, 150);
-                tr->add("Root/Branch1/Leaf");
-                tr->add("Root/Branch2");
-                tr->callback(on_generic_select, this);
-            }
-            tab3->end();
-
-            Fl_Group *tab4 = new Fl_Group(10, 70, 780, 520, "Text HTML");
-            tab4->hide();
-            {
-                Fl_Text_Editor *ed = new Fl_Text_Editor(20, 90, 740, 200);
-                ed->buffer(m_editor_buffer);
-
-                Fl_Help_View *hv = new Fl_Help_View(20, 310, 740, 200);
-                hv->value("<h2>HelpView</h2><p>Renders <b>simple</b> HTML, like this.</p><hr><p>Useful for about boxes or simple documentation.</p>");
-            }
-            tab4->end();
-
-            Fl_Group *tab5 = new Fl_Group(10, 70, 780, 520, "Graphics Advanced");
-            tab5->hide();
-            {
-                Fl_Chart *ch = new Fl_Chart(20, 90, 300, 200);
-                ch->type(FL_PIE_CHART);
-                ch->add(30, "A", FL_RED);
-                ch->add(50, "B", FL_GREEN);
-                ch->add(20, "C", FL_BLUE);
-
-                DemoTable *tb = new DemoTable(340, 90, 400, 200);
-                tb->rows(10);
-                tb->cols(5);
-                tb->row_header(1);
-                tb->col_header(1);
-                tb->redraw();
-                tb->end();
-
-                CustomCanvas *cc = new CustomCanvas(20, 310, 300, 200);
-            }
-            tab5->end();
-
-            Fl_Group *tab6 = new Fl_Group(10, 70, 780, 520, "Utilities");
-            tab6->hide();
-            {
-                Fl_Clock *cl1 = new Fl_Clock(20, 90, 100, 100);
-                cl1->type(FL_SQUARE_CLOCK);
-                Fl_Clock *cl2 = new Fl_Clock(130, 90, 100, 100);
-                cl2->type(FL_ROUND_CLOCK);
-
-                mui::Button *fb = new mui::Button(20, 210, 120, 30, "Open File...");
-                fb->callback(on_file_chooser, this);
-
-                m_wizard_handle = new Fl_Wizard(20, 260, 400, 200);
-                m_wizard_handle->box(mui::Theme::schemes::ROUNDED_INPUT_THIN_DOWN_BOX);
-                {
-                    Fl_Group *w1 = new Fl_Group(20, 260, 400, 200);
-                    Fl_Box *b1 = new Fl_Box(20, 260, 400, 200, "Content for step 1\nStep 1");
-                    b1->align(FL_ALIGN_CENTER);
-                    w1->end();
-
-                    Fl_Group *w2 = new Fl_Group(20, 260, 400, 200);
-                    Fl_Box *b2 = new Fl_Box(20, 260, 400, 200, "Content for step 2\nStep 2");
-                    b2->align(FL_ALIGN_CENTER);
-                    w2->end();
-
-                    Fl_Group *w3 = new Fl_Group(20, 260, 400, 200);
-                    Fl_Box *b3 = new Fl_Box(20, 260, 400, 200, "Content for step 3\nStep 3");
-                    b3->align(FL_ALIGN_CENTER);
-                    w3->end();
-                }
-                m_wizard_handle->end();
-
-                mui::Button *wp = new mui::Button(20, 470, 80, 30, "Prev");
-                wp->callback(on_wizard_prev, this);
-                mui::Button *wn = new mui::Button(110, 470, 80, 30, "Next");
-                wn->callback(on_wizard_next, this);
-            }
-            tab6->end();
-        }
         tabs->end();
 
+        const int tx = 10, ty = 75, tw = 780, th = 515;
+
+        auto tab1 = [&] { // --- Tab 1: Basic Controls ---
+            auto *btn = mui::build<mui::Button>("Button")
+                            ->callback(on_generic_click, this)
+                            ->end();
+            auto *rbtn = mui::build<mui::ReturnButton>("Return")
+                             ->callback(on_generic_click, this)
+                             ->end();
+            auto *lbtn = mui::build<mui::LightButton>("Light")
+                             ->callback(on_generic_toggle, this)
+                             ->value(1)
+                             ->end();
+
+            auto *cbtn = mui::build<Fl_Check_Button>("Check")
+                             ->callback(on_generic_toggle, this)
+                             ->value(1)
+                             ->end();
+            auto *rad1 = mui::build<mui::RadioButton>("Radio 1")
+                             ->callback(on_generic_toggle, this)
+                             ->value(1)
+                             ->end();
+            auto *rad2 = mui::build<mui::RadioButton>("Radio 2")
+                             ->callback(on_generic_toggle, this)
+                             ->end();
+
+            auto *inp = mui::build<Fl_Input>()
+                            ->value("Text")
+                            ->end();
+            auto *sinp = mui::build<Fl_Secret_Input>()
+                             ->value("secret")
+                             ->end();
+            auto *ch = mui::build<mui::Choice>()
+                           ->callback(on_generic_select, this)
+                           ->add("Option A|Option B|Option C")
+                           ->value(1)
+                           ->end();
+
+            auto *sl = mui::build<mui::Slider>()
+                           ->callback(on_generic_change, this)
+                           ->type(FL_HOR_SLIDER)
+                           ->bounds(0, 100)
+                           ->value(50)
+                           ->end();
+
+            auto *prg = mui::build<mui::Progress>()
+                            ->minimum(0)
+                            ->maximum(100)
+                            ->value(65)
+                            ->end();
+
+            auto *tab1 = mui::make_vbox(
+                tx, ty, tw, th, 10,
+                mui::Fix(mui::make_header("Buttons & Toggles"), 20),
+                mui::Fix(mui::make_hbox(10, mui::Fix(btn, 80), mui::Fix(rbtn, 80), mui::Fix(lbtn, 80), mui::Spacer()), 30),
+                mui::Fix(mui::make_hbox(10, mui::Fix(cbtn, 80), mui::Fix(rad1, 80), mui::Fix(rad2, 80), mui::Spacer()), 30),
+                mui::Fix(mui::make_header("Inputs & Choices"), 20),
+                mui::Fix(mui::make_hbox(10, mui::Stretch(inp), mui::Stretch(sinp), mui::Stretch(ch)), 30),
+                mui::Fix(mui::make_header("Sliders & Progress"), 20),
+                mui::Fix(mui::make_hbox(10, mui::Stretch(sl)), 30),
+                mui::Fix(mui::make_hbox(10, mui::Stretch(prg)), 25),
+                mui::Spacer());
+            tab1->margin(20);
+            tab1->label("Basic Controls");
+            return tab1;
+        };
+
+        auto tab2 = [&] { // --- Tab 2: Valuators ---
+            auto *vi = mui::build<Fl_Value_Input>()
+                           ->callback(on_generic_change, this)
+                           ->bounds(0, 1000)
+                           ->step(1)
+                           ->value(123)
+                           ->end();
+            auto *sp = mui::build<mui::Spinner>()
+                           ->callback(on_generic_change, this)
+                           ->minimum(0)
+                           ->maximum(50)
+                           ->step(1)
+                           ->value(10)
+                           ->end();
+            auto *ct = mui::build<Fl_Counter>()
+                           ->callback(on_generic_change, this)
+                           ->minimum(0)
+                           ->maximum(20)
+                           ->step(1, 5)
+                           ->value(5)
+                           ->end();
+            auto *adj = mui::build<Fl_Adjuster>()
+                            ->callback(on_generic_change, this)
+                            ->minimum(-1)
+                            ->maximum(1)
+                            ->value(0)
+                            ->end();
+            auto *vs = mui::build<mui::ValueSlider>()
+                           ->callback(on_generic_change, this)
+                           ->type(FL_HOR_SLIDER)
+                           ->bounds(0, 100)
+                           ->value(25)
+                           ->end();
+            auto *dial = mui::build<Fl_Dial>("Dial")
+                             ->callback(on_generic_change, this)
+                             ->bounds(0, 360)
+                             ->value(90)
+                             ->end();
+            auto *roller = mui::build<Fl_Roller>("Roller")
+                               ->callback(on_generic_change, this)
+                               ->bounds(0, 100)
+                               ->value(30)
+                               ->step(0.1)
+                               ->end();
+
+            auto *tab2 = mui::make_vbox(
+                tx, ty, tw, th, 10,
+                mui::Fix(mui::make_hbox(10, mui::Fix(mui::make_label("ValueInput:"), 100), mui::Stretch(vi)), 30),
+                mui::Fix(mui::make_hbox(10, mui::Fix(mui::make_label("Spinner:"), 100), mui::Stretch(sp)), 30),
+                mui::Fix(mui::make_hbox(10, mui::Fix(mui::make_label("Counter:"), 100), mui::Stretch(ct)), 30),
+                mui::Fix(mui::make_hbox(10, mui::Fix(mui::make_label("Adjuster:"), 100), mui::Stretch(adj)), 30),
+                mui::Fix(mui::make_hbox(10, mui::Fix(mui::make_label("ValueSlider:"), 100), mui::Stretch(vs)), 30),
+                mui::FixedSpacer(20),
+                mui::Fix(mui::make_hbox(20, mui::Fix(dial, 60), mui::Fix(roller, 30), mui::Spacer()), 60),
+                mui::Spacer());
+            tab2->margin(20);
+            tab2->label("Valuators");
+            return tab2;
+        };
+
+        auto tab3 = [&] { // --- Tab 3: Data Display ---
+            auto *out = mui::build<Fl_Output>()
+                            ->value("Read-only")
+                            ->end();
+            auto *vout = mui::build<Fl_Value_Output>()
+                             ->value(3.14159)
+                             ->end();
+            auto *mout = mui::build<Fl_Multiline_Output>()
+                             ->value("Line 1\nLine 2\nLine 3")
+                             ->end();
+            auto *br = mui::build<mui::Browser>()
+                           ->callback(on_generic_select, this)
+                           ->type(FL_MULTI_BROWSER)
+                           ->add("Item 1")
+                           ->add("Item 2")
+                           ->add("Item 3")
+                           ->end();
+            auto *tr = mui::build<mui::Tree>()
+                           ->callback(on_generic_select, this)
+                           ->add("Root/Branch1/Leaf")
+                           ->add("Root/Branch2")
+                           ->end();
+
+            auto *tab3 = mui::make_vbox(
+                tx, ty, tw, th, 20,
+                mui::Fix(mui::make_hbox(10, mui::Stretch(out), mui::Stretch(vout)), 30),
+                mui::Stretch(mout),
+                mui::Stretch(mui::make_hbox(10, mui::Stretch(br), mui::Stretch(tr))));
+            tab3->margin(20);
+            tab3->label("Data Display");
+            return tab3;
+        };
+
+        auto tab4 = [&] { // --- Tab 4: Text & HTML ---
+            auto *ed = mui::make<Fl_Text_Editor>();
+            ed->buffer(m_editor_buffer);
+            auto *hv = mui::build<Fl_Help_View>()
+                           ->value("<h2>HelpView</h2><p>Renders <b>simple</b> HTML, like this.</p>"
+                            "<hr><p>Useful for about boxes or simple documentation.</p>")
+                           ->end();
+
+            auto *tab4 = mui::make_vbox(
+                tx, ty, tw, th, 20, mui::Stretch(ed), mui::Stretch(hv));
+            tab4->margin(20);
+            tab4->label("Text & HTML");
+            return tab4;
+        };
+
+        auto tab5 = [&] { // --- Tab 5: Graphics & Advanced ---
+            auto *ch = mui::build<Fl_Chart>()
+                           ->type(FL_PIE_CHART)
+                           ->add(30, "A", FL_RED)
+                           ->add(50, "B", FL_GREEN)
+                           ->add(20, "C", FL_BLUE)
+                           ->end();
+
+            auto *tb = mui::make<DemoTable>();
+            tb->rows(10);
+            tb->cols(5);
+            tb->row_header(1);
+            tb->col_header(1);
+            tb->redraw();
+
+            auto *cc = mui::make<CustomCanvas>();
+
+            auto *tab5 = mui::make_vbox(
+                tx, ty, tw, th, 20,
+                mui::Stretch(mui::make_hbox(20, mui::Stretch(ch), mui::Stretch(tb))),
+                mui::Stretch(cc));
+            tab5->margin(20);
+            tab5->label("Graphics & Advanced");
+            return tab5;
+        };
+
+        auto tab6 = [&] { // --- Tab 6: Utilities ---
+            auto *cl1 = mui::build<Fl_Clock>()->type(FL_SQUARE_CLOCK)->end();
+            auto *cl2 = mui::build<Fl_Clock>()->type(FL_ROUND_CLOCK)->end();
+
+            auto *fb = mui::build<mui::Button>("Open File...")
+                           ->callback(on_file_chooser, this)
+                           ->end();
+
+            auto make_wizard_page = [](const char *text)
+            {
+                auto *box = mui::build<Fl_Box>(text)->align(FL_ALIGN_CENTER)->end();
+                auto *group = mui::make_group(box);
+                group->resizable(box);
+                return group;
+            };
+
+            m_wizard_handle = mui::make_wizard(
+                make_wizard_page("Content for step 1\nStep 1"),
+                make_wizard_page("Content for step 2\nStep 2"),
+                make_wizard_page("Content for step 3\nStep 3"));
+
+            m_wizard_handle->box(mui::Theme::schemes::ROUNDED_INPUT_THIN_DOWN_BOX);
+
+            if (m_wizard_handle->children() > 0)
+                m_wizard_handle->value(m_wizard_handle->child(0));
+
+            auto *wp = mui::build<mui::Button>("Prev")
+                           ->callback(on_wizard_prev, this)
+                           ->end();
+            auto *wn = mui::build<mui::Button>("Next")
+                           ->callback(on_wizard_next, this)
+                           ->end();
+
+            auto *tab6 = mui::make_vbox(
+                tx, ty, tw, th, 10,
+                mui::Fix(mui::make_hbox(10, mui::Fix(cl1, 100), mui::Fix(cl2, 100), mui::Spacer()), 100),
+                mui::FixedSpacer(10),
+                mui::Fix(mui::make_hbox(0, mui::Fix(fb, 120), mui::Spacer()), 30),
+                mui::FixedSpacer(10),
+                mui::Stretch(m_wizard_handle),
+                mui::Fix(mui::make_hbox(10, mui::Spacer(), mui::Fix(wp, 80), mui::Fix(wn, 80)), 30));
+            tab6->margin(20);
+            tab6->label("Utilities");
+            return tab6;
+        };
+        tabs->add(tab1());
+        tabs->add(tab2());
+        tabs->add(tab3());
+        tabs->add(tab4());
+        tabs->add(tab5());
+        tabs->add(tab6());
+
+        auto *tabs_container = mui::make_vbox(0, mui::Stretch(tabs));
+        tabs_container->margin(10);
+
+        auto *main_layout = mui::make_vbox(0, 0, 800, 600, 0,
+                                           mui::Fix(m_menu_bar_handle, 30),
+                                           mui::Stretch(tabs_container));
+
         m_win->end();
-        m_win->resizable(tabs);
+        m_win->resizable(main_layout);
+        m_win->size_range(600, 400);
     }
 
     int run()
