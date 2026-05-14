@@ -31,6 +31,13 @@ namespace mui
 
             draw_arrow(up_button_, true, palette);
             draw_arrow(down_button_, false, palette);
+
+            if (Fl::focus() == this || contains(Fl::focus()))
+            {
+                engine::draw_focus_ring(x(), y(), w(), h(),
+                                        palette.focus_ring, palette.metrics.focus_ring_opacity,
+                                        palette.metrics.focus_ring_width, palette.metrics.radius);
+            }
         }
 
     private:

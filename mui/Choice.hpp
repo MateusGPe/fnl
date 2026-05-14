@@ -70,6 +70,13 @@ namespace mui
             const int arrow_y = y() + (h() - 6) / 2;
             fl_polygon(arrow_x, arrow_y, arrow_x + 8, arrow_y, arrow_x + 4, arrow_y + 6);
 
+            if (Fl::focus() == this)
+            {
+                engine::draw_focus_ring(x(), y(), w(), h(),
+                                        palette.focus_ring, palette.metrics.focus_ring_opacity,
+                                        palette.metrics.focus_ring_width, palette.metrics.radius);
+            }
+
             fl_pop_clip();
         }
 

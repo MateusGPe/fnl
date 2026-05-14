@@ -47,6 +47,17 @@ namespace mui
                 fl_draw_box(draw_b, this->x(), this->y(), this->w(), this->h(), draw_c);
             }
 
+            if (Fl::focus() == this)
+            {
+                fl_color(palette.focus_ring);
+                fl_line_style(FL_SOLID, palette.metrics.focus_ring_width);
+                if (palette.metrics.radius > 0)
+                    fl_rounded_rect(this->x() + 1, this->y() + 1, this->w() - 2, this->h() - 2, palette.metrics.radius);
+                else
+                    fl_rect(this->x() + 1, this->y() + 1, this->w() - 2, this->h() - 2);
+                fl_line_style(0);
+            }
+
             if constexpr (requires { this->is_hovered; })
             {
                 if constexpr (std::is_base_of_v<Fl_Light_Button, FlBase> ||
@@ -54,15 +65,12 @@ namespace mui
                 {
                     if (this->is_hovered && this->value())
                     {
-                        unsigned char r, g, b;
-                        Fl::get_color(palette.focus_ring, r, g, b);
-                        fl_color(rgba(r, g, b,
-                                      static_cast<uint8_t>(palette.metrics.focus_ring_opacity * 255.0f)));
+                        fl_color(palette.selection);
                         fl_line_style(FL_SOLID, palette.metrics.focus_ring_width);
                         if (palette.metrics.radius > 0)
-                            fl_rounded_rect(this->x(), this->y(), this->w(), this->h(), palette.metrics.radius);
+                            fl_rounded_rect(this->x() + 1, this->y() + 1, this->w() - 2, this->h() - 2, palette.metrics.radius);
                         else
-                            fl_rect(this->x(), this->y(), this->w(), this->h());
+                            fl_rect(this->x() + 1, this->y() + 1, this->w() - 2, this->h() - 2);
                         fl_line_style(0);
                     }
                 }

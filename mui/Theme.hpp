@@ -235,7 +235,7 @@ namespace mui
                 Fl::set_boxtype(Theme::schemes::TOOLBAR_FRAME, engine::tpl_static_frame<&ThemePalette::thin_up_frame>, 1, 1, 2, 2);
                 Fl::set_boxtype(Theme::schemes::TEXT_INSET_BOX, [](int, int, int, int, Fl_Color) {}, 8, 0, 16, 0);
 
-                Fl::visible_focus(0);
+                Fl::visible_focus(1);
 
 #ifdef _WIN32
                 Fl_Tooltip::size(12);

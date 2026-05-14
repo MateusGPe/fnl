@@ -1,9 +1,13 @@
 #pragma once
 #include <FL/Fl.H>
 #include <FL/Fl_Widget.H>
+#include <FL/Fl_Input_Choice.H>
+#include <FL/Fl_Input_.H>
+#include <FL/Fl_Text_Display.H>
 #include "Theme.hpp"
 #include "Theme/engine.hpp"
 #include <functional>
+#include <type_traits>
 
 namespace mui
 {
@@ -57,15 +61,67 @@ namespace mui
         };
 
         template <typename FlBase>
+        class Focusable : public FlBase
+        {
+        public:
+            template <typename... Args>
+            explicit Focusable(Args &&...args) : FlBase(std::forward<Args>(args)...) {}
+            static inline void draw_box_focus(Fl_Boxtype bt, int x, int y, int w, int h)
+            {
+                switch (bt)
+                {
+                case FL_DOWN_BOX:
+                case FL_DOWN_FRAME:
+                case FL_THIN_DOWN_BOX:
+                case FL_THIN_DOWN_FRAME:
+                    x++;
+                    y++;
+                    w--;
+                    h--;
+                    break;
+                default:
+                    break;
+                }
+                x += Fl::box_dx(bt);
+                y += Fl::box_dy(bt);
+                w -= Fl::box_dw(bt);
+                h -= Fl::box_dh(bt);
+
+                const auto &palette = ThemeManager::get_palette();
+                engine::draw_focus_ring(x, y, w, h, palette.focus_ring, palette.metrics.focus_ring_opacity, palette.metrics.focus_ring_width, palette.metrics.radius);
+            }
+
+        protected:
+            void draw() override
+            {
+                const bool is_focused = (Fl::focus() == this && FlBase::visible_focus() && Fl::visible_focus());
+                if constexpr (std::is_base_of_v<Fl_Input_, FlBase> || std::is_base_of_v<Fl_Text_Display, FlBase>)
+                {
+                    FlBase::draw();
+                    if (is_focused)
+                        draw_box_focus(FL_NO_BOX, FlBase::x(), FlBase::y(), FlBase::w(), FlBase::h());
+                }
+                else
+                {
+                    FlBase::visible_focus(false);
+                    FlBase::draw();
+                    FlBase::visible_focus(is_focused);
+                    if (is_focused)
+                        draw_box_focus(FlBase::box(), FlBase::x(), FlBase::y(), FlBase::w(), FlBase::h());
+                }
+            }
+        };
+
+        template <typename FlBase>
         class AutoThemed : public FlBase
         {
         public:
             template <typename... Args>
             explicit AutoThemed(Args &&...args) : FlBase(std::forward<Args>(args)...)
             {
-                this->box(FL_GTK_UP_BOX);
-                if constexpr (requires { this->down_box(FL_NO_BOX); })
-                    this->down_box(Theme::schemes::BUTTON_DOWN_BOX);
+                FlBase::box(FL_GTK_UP_BOX);
+                if constexpr (requires { FlBase::down_box(FL_NO_BOX); })
+                    FlBase::down_box(Theme::schemes::BUTTON_DOWN_BOX);
             }
         };
 

@@ -89,7 +89,10 @@ namespace mui
             }
 
             // FLTK calculates geometry and draws flat rectangles/text
+            auto visible_f = visible_focus();
+            visible_focus(false); // defer focus ring drawing until after tabs are drawn
             Fl_Tabs::draw();
+            visible_focus(visible_f);
 
             if (children() == 0 || !redraw_tabs)
                 return;
@@ -121,17 +124,25 @@ namespace mui
             fl_color(palette.bg_main);
             fl_xyline(tx, border_y, tx + tw - 1);
 
-            // 3. Draw the modern accent line at the junction, rather than the top
-            const Fl_Color accent = active_r() ? palette.selection : fl_inactive(palette.selection);
-            fl_color(accent);
+            // 3. Draw the accent/focus line.
+            // Instead of a separate focus ring, we enhance the tab's existing accent line
+            // when focused, making it thicker and using the theme's focus color.
+            const bool is_focused = (Fl::focus() == this && visible_focus() && Fl::visible_focus());
+
+            const Fl_Color accent_color = is_focused
+                                              ? palette.focus_ring
+                                              : (active_r() ? palette.selection : fl_inactive(palette.selection));
+            const int accent_height = is_focused ? 3 : 2;
+
+            fl_color(accent_color);
 
             if (top)
             {
-                fl_rectf(tx, border_y - 1, tw, 2);
+                fl_rectf(tx, border_y - (accent_height - 1), tw, accent_height);
             }
             else
             {
-                fl_rectf(tx, border_y, tw, 2);
+                fl_rectf(tx, border_y, tw, accent_height);
             }
 
             fl_pop_clip();

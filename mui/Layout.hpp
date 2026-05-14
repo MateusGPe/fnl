@@ -1,14 +1,7 @@
 // Layout.hpp
 #pragma once
-#include <FL/Fl_Flex.H>
-#include <FL/Fl_Grid.H>
-#include <FL/Fl_Pack.H>
-#include <FL/Fl_Scroll.H>
-#include <FL/Fl_Tabs.H>
-#include <FL/Fl_Tile.H>
-#include <FL/Fl_Wizard.H>
-#include <FL/Fl_Group.H>
-#include <FL/Fl_Box.H>
+#include "Widgets.hpp"
+#include "Tabs.hpp"
 #include <memory>
 #include <utility>
 
@@ -16,10 +9,10 @@ namespace mui
 {
     // --- Geometry Fallback ---
     // Grabs dimensions from the current active group to ensure layout
-    // engines like Fl_Flex have non-zero geometry to calculate correctly.
+    // engines like Flex have non-zero geometry to calculate correctly.
     inline void get_default_bounds(int &x, int &y, int &w, int &h)
     {
-        if (Fl_Group *p = Fl_Group::current())
+        if (Group *p = Group::current())
         {
             x = p->x();
             y = p->y();
@@ -157,16 +150,16 @@ namespace mui
     }
 
     // --- Component Factories ---
-    inline Fl_Box *make_label(const char *text, Fl_Align alignment = FL_ALIGN_LEFT | FL_ALIGN_INSIDE)
+    inline Box *make_label(const char *text, Fl_Align alignment = FL_ALIGN_LEFT | FL_ALIGN_INSIDE)
     {
-        auto *box = make<Fl_Box>(text);
+        auto *box = make<Box>(text);
         box->align(alignment);
         return box;
     }
 
-    inline Fl_Box *make_header(const char *text)
+    inline Box *make_header(const char *text)
     {
-        auto *box = make<Fl_Box>(text);
+        auto *box = make<Box>(text);
         box->align(FL_ALIGN_LEFT | FL_ALIGN_INSIDE);
         box->labelfont(FL_HELVETICA_BOLD);
         box->box(FL_FLAT_BOX);
@@ -182,13 +175,13 @@ namespace mui
 
     inline FlexItem Fix(Fl_Widget *w, int size) { return {w, size}; }
     inline FlexItem Stretch(Fl_Widget *w) { return {w, 0}; }
-    inline FlexItem Spacer() { return {new Fl_Box(0, 0, 0, 0), 0}; }
-    inline FlexItem FixedSpacer(int size) { return {new Fl_Box(0, 0, 0, 0), size}; }
+    inline FlexItem Spacer() { return {new Box(0, 0, 0, 0), 0}; }
+    inline FlexItem FixedSpacer(int size) { return {new Box(0, 0, 0, 0), size}; }
 
     template <typename... Items>
-    Fl_Flex *make_hbox(int x, int y, int w, int h, int gap, Items... items)
+    Flex *make_hbox(int x, int y, int w, int h, int gap, Items... items)
     {
-        Fl_Flex *flex = new Fl_Flex(x, y, w, h, Fl_Flex::HORIZONTAL);
+        Flex *flex = new Flex(x, y, w, h, Flex::HORIZONTAL);
         (..., flex->add(items.widget));
         flex->gap(gap);
         (..., (items.fixed_size > 0 ? flex->fixed(items.widget, items.fixed_size) : (void)0));
@@ -197,10 +190,10 @@ namespace mui
     }
 
     template <typename... Items>
-    Fl_Flex *make_hbox(int w, int h, int gap, Items... items)
+    Flex *make_hbox(int w, int h, int gap, Items... items)
     {
         int x = 0, y = 0, dummy_w, dummy_h;
-        if (Fl_Group *p = Fl_Group::current())
+        if (Group *p = Group::current())
         {
             x = p->x();
             y = p->y();
@@ -209,7 +202,7 @@ namespace mui
     }
 
     template <typename... Items>
-    Fl_Flex *make_hbox(int gap, Items... items)
+    Flex *make_hbox(int gap, Items... items)
     {
         int x, y, w, h;
         get_default_bounds(x, y, w, h);
@@ -217,9 +210,9 @@ namespace mui
     }
 
     template <typename... Items>
-    Fl_Flex *make_vbox(int x, int y, int w, int h, int gap, Items... items)
+    Flex *make_vbox(int x, int y, int w, int h, int gap, Items... items)
     {
-        Fl_Flex *flex = new Fl_Flex(x, y, w, h, Fl_Flex::VERTICAL);
+        Flex *flex = new Flex(x, y, w, h, Flex::VERTICAL);
         (..., flex->add(items.widget));
 
         flex->gap(gap);
@@ -230,10 +223,10 @@ namespace mui
     }
 
     template <typename... Items>
-    Fl_Flex *make_vbox(int w, int h, int gap, Items... items)
+    Flex *make_vbox(int w, int h, int gap, Items... items)
     {
         int x = 0, y = 0, dummy_w, dummy_h;
-        if (Fl_Group *p = Fl_Group::current())
+        if (Group *p = Group::current())
         {
             x = p->x();
             y = p->y();
@@ -242,7 +235,7 @@ namespace mui
     }
 
     template <typename... Items>
-    Fl_Flex *make_vbox(int gap, Items... items)
+    Flex *make_vbox(int gap, Items... items)
     {
         int x, y, w, h;
         get_default_bounds(x, y, w, h);
@@ -264,7 +257,7 @@ namespace mui
     TypeName *FuncName(int w, int h, Widgets *...widgets)                                 \
     {                                                                                     \
         int x = 0, y = 0, dummy_w, dummy_h;                                               \
-        if (Fl_Group *p = Fl_Group::current())                                            \
+        if (Group *p = Group::current())                                            \
         {                                                                                 \
             x = p->x();                                                                   \
             y = p->y();                                                                   \
@@ -279,12 +272,12 @@ namespace mui
         return FuncName(x, y, w, h, widgets...);                                          \
     }
 
-    MUI_MAKE_CONTAINER_HELPER(Fl_Group, make_group)
-    MUI_MAKE_CONTAINER_HELPER(Fl_Pack, make_pack)
-    MUI_MAKE_CONTAINER_HELPER(Fl_Scroll, make_scroll)
-    MUI_MAKE_CONTAINER_HELPER(Fl_Tabs, make_tabs)
-    MUI_MAKE_CONTAINER_HELPER(Fl_Tile, make_tile)
-    MUI_MAKE_CONTAINER_HELPER(Fl_Wizard, make_wizard)
+    MUI_MAKE_CONTAINER_HELPER(Group, make_group)
+    MUI_MAKE_CONTAINER_HELPER(Pack, make_pack)
+    MUI_MAKE_CONTAINER_HELPER(Scroll, make_scroll)
+    MUI_MAKE_CONTAINER_HELPER(Tabs, make_tabs)
+    MUI_MAKE_CONTAINER_HELPER(Tile, make_tile)
+    MUI_MAKE_CONTAINER_HELPER(Wizard, make_wizard)
 
 #undef MUI_MAKE_CONTAINER_HELPER
 
@@ -299,7 +292,7 @@ namespace mui
     struct GridDimensions : detail::GridOption
     {
         int rows, cols;
-        void apply(Fl_Grid *grid) const { grid->layout(rows, cols); }
+        void apply(Grid *grid) const { grid->layout(rows, cols); }
         GridDimensions(int r, int c) : rows(r), cols(c) {}
     };
     inline GridDimensions Layout(int rows, int cols) { return GridDimensions{rows, cols}; }
@@ -307,7 +300,7 @@ namespace mui
     struct GridMargin : detail::GridOption
     {
         int left, top, right, bottom;
-        void apply(Fl_Grid *grid) const { grid->margin(left, top, right, bottom); }
+        void apply(Grid *grid) const { grid->margin(left, top, right, bottom); }
         GridMargin(int l, int t, int r, int b) : left(l), top(t), right(r), bottom(b) {}
     };
     inline GridMargin Margin(int m) { return GridMargin{m, m, m, m}; }
@@ -316,7 +309,7 @@ namespace mui
     struct GridGap : detail::GridOption
     {
         int row_gap, col_gap;
-        void apply(Fl_Grid *grid) const { grid->gap(row_gap, col_gap); }
+        void apply(Grid *grid) const { grid->gap(row_gap, col_gap); }
         GridGap(int rg, int cg) : row_gap(rg), col_gap(cg) {}
     };
     inline GridGap Gap(int g) { return GridGap{g, g}; }
@@ -326,7 +319,7 @@ namespace mui
     struct GridColWeights : detail::GridOption
     {
         std::tuple<Weights...> weights;
-        void apply(Fl_Grid *grid) const
+        void apply(Grid *grid) const
         {
             int i = 0;
             std::apply([&](auto... w_args)
@@ -341,7 +334,7 @@ namespace mui
     struct GridRowWeights : detail::GridOption
     {
         std::tuple<Weights...> weights;
-        void apply(Fl_Grid *grid) const
+        void apply(Grid *grid) const
         {
             int i = 0;
             std::apply([&](auto... w_args)
@@ -356,7 +349,7 @@ namespace mui
     struct GridColWidths : detail::GridOption
     {
         std::tuple<Widths...> widths;
-        void apply(Fl_Grid *grid) const
+        void apply(Grid *grid) const
         {
             int i = 0;
             std::apply([&](auto... w_args)
@@ -371,7 +364,7 @@ namespace mui
     struct GridRowHeights : detail::GridOption
     {
         std::tuple<Heights...> heights;
-        void apply(Fl_Grid *grid) const
+        void apply(Grid *grid) const
         {
             int i = 0;
             std::apply([&](auto... h_args)
@@ -394,9 +387,9 @@ namespace mui
     }
 
     template <typename... Args>
-    Fl_Grid *make_grid(int x, int y, int w, int h, Args... args)
+    Grid *make_grid(int x, int y, int w, int h, Args... args)
     {
-        Fl_Grid *grid = new Fl_Grid(x, y, w, h);
+        Grid *grid = new Grid(x, y, w, h);
 
         (..., [&]
          {
@@ -414,10 +407,10 @@ namespace mui
     }
 
     template <typename... Args>
-    Fl_Grid *make_grid(int w, int h, Args... args)
+    Grid *make_grid(int w, int h, Args... args)
     {
         int x = 0, y = 0, dummy_w, dummy_h;
-        if (Fl_Group *p = Fl_Group::current())
+        if (Group *p = Group::current())
         {
             x = p->x();
             y = p->y();
@@ -426,7 +419,7 @@ namespace mui
     }
 
     template <typename... Args>
-    Fl_Grid *make_grid(Args... args)
+    Grid *make_grid(Args... args)
     {
         int x, y, w, h;
         get_default_bounds(x, y, w, h);

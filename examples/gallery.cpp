@@ -5,34 +5,10 @@
 #include <mui.hpp>
 #include <FL/Fl_Window.H>
 #include <mui/Theme/data.hpp>
-#include <FL/Fl_Group.H>
-#include <FL/Fl_Menu_Bar.H>
-#include <FL/Fl_Button.H>
-#include <FL/Fl_Return_Button.H>
-#include <FL/Fl_Light_Button.H>
-#include <FL/Fl_Check_Button.H>
-#include <FL/Fl_Input.H>
-#include <FL/Fl_Secret_Input.H>
-#include <FL/Fl_Progress.H>
-#include <FL/Fl_Value_Input.H>
-#include <FL/Fl_Counter.H>
-#include <FL/Fl_Adjuster.H>
-#include <FL/Fl_Dial.H>
-#include <FL/Fl_Roller.H>
-#include <FL/Fl_Output.H>
-#include <FL/Fl_Value_Output.H>
-#include <FL/Fl_Multiline_Output.H>
-#include <FL/Fl_Text_Editor.H>
-#include <FL/Fl_Help_View.H>
-#include <FL/Fl_Chart.H>
-#include <FL/Fl_Table.H>
-#include <FL/Fl_Clock.H>
-#include <FL/Fl_Wizard.H>
-#include <FL/Fl_Box.H>
 #include <FL/Fl_Text_Buffer.H>
 #include <FL/fl_draw.H>
 
-class DemoTable : public Fl_Table
+class DemoTable : public mui::Table
 {
 protected:
     void draw_cell(TableContext context, int R, int C, int X, int Y, int W, int H) override
@@ -63,7 +39,7 @@ protected:
     }
 
 public:
-    DemoTable(int X, int Y, int W, int H, const char *l = 0) : Fl_Table(X, Y, W, H, l)
+    DemoTable(int X, int Y, int W, int H, const char *l = 0) : mui::Table(X, Y, W, H, l)
     {
         end();
     }
@@ -91,8 +67,8 @@ class WidgetGallery
 private:
     Fl_Double_Window *m_win;
     Fl_Text_Buffer *m_editor_buffer;
-    Fl_Wizard *m_wizard_handle = nullptr;
-    Fl_Menu_Bar *m_menu_bar_handle = nullptr;
+    mui::Wizard *m_wizard_handle = nullptr;
+    mui::MenuBar *m_menu_bar_handle = nullptr;
     std::vector<std::string> m_theme_strings;
 
 public:
@@ -115,7 +91,7 @@ public:
 
     static void on_theme_menu_select(Fl_Widget *w, void *v)
     {
-        auto *bar = static_cast<Fl_Menu_Bar *>(w);
+        auto *bar = static_cast<mui::MenuBar *>(w);
         const Fl_Menu_Item *item = bar->mvalue();
         if (!item || !item->label())
             return;
@@ -166,7 +142,7 @@ public:
         m_win = new Fl_Double_Window(800, 600, "MUI Widget Gallery");
         m_win->begin();
 
-        m_menu_bar_handle = new Fl_Menu_Bar(0, 0, 800, 30);
+        m_menu_bar_handle = new mui::MenuBar(0, 0, 800, 30);
         {
             m_menu_bar_handle->add("File/Quit", 0, on_quit, this);
             m_menu_bar_handle->add("Help/About");
@@ -203,7 +179,7 @@ public:
                              ->value(1)
                              ->end();
 
-            auto *cbtn = mui::build<Fl_Check_Button>("Check")
+            auto *cbtn = mui::build<mui::CheckButton>("Check")
                              ->callback(on_generic_toggle, this)
                              ->value(1)
                              ->end();
@@ -215,10 +191,10 @@ public:
                              ->callback(on_generic_toggle, this)
                              ->end();
 
-            auto *inp = mui::build<Fl_Input>()
+            auto *inp = mui::build<mui::Input>()
                             ->value("Text")
                             ->end();
-            auto *sinp = mui::build<Fl_Secret_Input>()
+            auto *sinp = mui::build<mui::SecretInput>()
                              ->value("secret")
                              ->end();
             auto *ch = mui::build<mui::Choice>()
@@ -240,13 +216,19 @@ public:
                             ->value(65)
                             ->end();
 
+            auto *ic = mui::build<mui::InputChoice>()
+                           ->add("Choice 1")
+                           ->add("Choice 2")
+                           ->add("Choice 3")
+                           ->end();
+
             auto *tab1 = mui::make_vbox(
                 tx, ty, tw, th, 10,
                 mui::Fix(mui::make_header("Buttons & Toggles"), 20),
                 mui::Fix(mui::make_hbox(10, mui::Fix(btn, 80), mui::Fix(rbtn, 80), mui::Fix(lbtn, 80), mui::Spacer()), 30),
                 mui::Fix(mui::make_hbox(10, mui::Fix(cbtn, 80), mui::Fix(rad1, 80), mui::Fix(rad2, 80), mui::Spacer()), 30),
                 mui::Fix(mui::make_header("Inputs & Choices"), 20),
-                mui::Fix(mui::make_hbox(10, mui::Stretch(inp), mui::Stretch(sinp), mui::Stretch(ch)), 30),
+                mui::Fix(mui::make_hbox(10, mui::Stretch(inp), mui::Stretch(sinp), mui::Stretch(ch), mui::Stretch(ic)), 30),
                 mui::Fix(mui::make_header("Sliders & Progress"), 20),
                 mui::Fix(mui::make_hbox(10, mui::Stretch(sl)), 30),
                 mui::Fix(mui::make_hbox(10, mui::Stretch(prg)), 25),
@@ -257,7 +239,7 @@ public:
         };
 
         auto tab2 = [&] { // --- Tab 2: Valuators ---
-            auto *vi = mui::build<Fl_Value_Input>()
+            auto *vi = mui::build<mui::ValueInput>()
                            ->callback(on_generic_change, this)
                            ->bounds(0, 1000)
                            ->step(1)
@@ -270,14 +252,14 @@ public:
                            ->step(1)
                            ->value(10)
                            ->end();
-            auto *ct = mui::build<Fl_Counter>()
+            auto *ct = mui::build<mui::Counter>()
                            ->callback(on_generic_change, this)
                            ->minimum(0)
                            ->maximum(20)
                            ->step(1, 5)
                            ->value(5)
                            ->end();
-            auto *adj = mui::build<Fl_Adjuster>()
+            auto *adj = mui::build<mui::Adjuster>()
                             ->callback(on_generic_change, this)
                             ->minimum(-1)
                             ->maximum(1)
@@ -289,12 +271,12 @@ public:
                            ->bounds(0, 100)
                            ->value(25)
                            ->end();
-            auto *dial = mui::build<Fl_Dial>("Dial")
+            auto *dial = mui::build<mui::Dial>("Dial")
                              ->callback(on_generic_change, this)
                              ->bounds(0, 360)
                              ->value(90)
                              ->end();
-            auto *roller = mui::build<Fl_Roller>("Roller")
+            auto *roller = mui::build<mui::Roller>("Roller")
                                ->callback(on_generic_change, this)
                                ->bounds(0, 100)
                                ->value(30)
@@ -317,13 +299,13 @@ public:
         };
 
         auto tab3 = [&] { // --- Tab 3: Data Display ---
-            auto *out = mui::build<Fl_Output>()
+            auto *out = mui::build<mui::Output>()
                             ->value("Read-only")
                             ->end();
-            auto *vout = mui::build<Fl_Value_Output>()
+            auto *vout = mui::build<mui::ValueOutput>()
                              ->value(3.14159)
                              ->end();
-            auto *mout = mui::build<Fl_Multiline_Output>()
+            auto *mout = mui::build<mui::MultilineOutput>()
                              ->value("Line 1\nLine 2\nLine 3")
                              ->end();
             auto *br = mui::build<mui::Browser>()
@@ -350,11 +332,11 @@ public:
         };
 
         auto tab4 = [&] { // --- Tab 4: Text & HTML ---
-            auto *ed = mui::make<Fl_Text_Editor>();
+            auto *ed = mui::make<mui::TextEditor>();
             ed->buffer(m_editor_buffer);
-            auto *hv = mui::build<Fl_Help_View>()
+            auto *hv = mui::build<mui::HelpView>()
                            ->value("<h2>HelpView</h2><p>Renders <b>simple</b> HTML, like this.</p>"
-                            "<hr><p>Useful for about boxes or simple documentation.</p>")
+                                   "<hr><p>Useful for about boxes or simple documentation.</p>")
                            ->end();
 
             auto *tab4 = mui::make_vbox(
@@ -365,7 +347,7 @@ public:
         };
 
         auto tab5 = [&] { // --- Tab 5: Graphics & Advanced ---
-            auto *ch = mui::build<Fl_Chart>()
+            auto *ch = mui::build<mui::Chart>()
                            ->type(FL_PIE_CHART)
                            ->add(30, "A", FL_RED)
                            ->add(50, "B", FL_GREEN)
@@ -391,8 +373,8 @@ public:
         };
 
         auto tab6 = [&] { // --- Tab 6: Utilities ---
-            auto *cl1 = mui::build<Fl_Clock>()->type(FL_SQUARE_CLOCK)->end();
-            auto *cl2 = mui::build<Fl_Clock>()->type(FL_ROUND_CLOCK)->end();
+            auto *cl1 = mui::build<mui::Clock>()->type(FL_SQUARE_CLOCK)->end();
+            auto *cl2 = mui::build<mui::Clock>()->type(FL_ROUND_CLOCK)->end();
 
             auto *fb = mui::build<mui::Button>("Open File...")
                            ->callback(on_file_chooser, this)
@@ -400,7 +382,7 @@ public:
 
             auto make_wizard_page = [](const char *text)
             {
-                auto *box = mui::build<Fl_Box>(text)->align(FL_ALIGN_CENTER)->end();
+                auto *box = mui::make_header(text);
                 auto *group = mui::make_group(box);
                 group->resizable(box);
                 return group;
