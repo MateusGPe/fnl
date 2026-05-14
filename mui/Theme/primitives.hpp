@@ -10,6 +10,20 @@ namespace mui
 {
     namespace core
     {
+        enum class Rounding
+        {
+            None = 0,
+            TopLeft = 1,
+            TopRight = 2,
+            BottomRight = 4,
+            BottomLeft = 8,
+            All = TopLeft | TopRight | BottomRight | BottomLeft,
+            Left = TopLeft | BottomLeft,
+            Right = TopRight | BottomRight,
+            Top = TopLeft | TopRight,
+            Bottom = BottomLeft | BottomRight
+        };
+
         struct FrameColors
         {
             Fl_Color out_top, out_side, out_bot;
@@ -21,6 +35,59 @@ namespace mui
         [[nodiscard]] inline Fl_Color activated_color(Fl_Color c, bool active) noexcept
         {
             return active ? c : fl_inactive(c);
+        }
+
+        inline void rounded_rect_corners(int x, int y, int w, int h, int r, int corners)
+        {
+            if (r == 0 || corners == static_cast<int>(Rounding::None))
+            {
+                fl_rect(x, y, w, h);
+                return;
+            }
+            int d = 2 * r;
+
+            fl_xyline(x + ((corners & 1) ? r : 0), y, x + w - 1 - ((corners & 2) ? r : 0));
+            fl_xyline(x + ((corners & 8) ? r : 0), y + h - 1, x + w - 1 - ((corners & 4) ? r : 0));
+            fl_yxline(x, y + ((corners & 1) ? r : 0), y + h - 1 - ((corners & 8) ? r : 0));
+            fl_yxline(x + w - 1, y + ((corners & 2) ? r : 0), y + h - 1 - ((corners & 4) ? r : 0));
+
+            if (corners & 1)
+                fl_arc(x, y, d, d, 90, 180);
+            if (corners & 2)
+                fl_arc(x + w - d, y, d, d, 0, 90);
+            if (corners & 4)
+                fl_arc(x + w - d, y + h - d, d, d, 270, 360);
+            if (corners & 8)
+                fl_arc(x, y + h - d, d, d, 180, 270);
+        }
+
+        inline void rounded_rectf_corners(int x, int y, int w, int h, int r, int corners)
+        {
+            if (r == 0 || corners == static_cast<int>(Rounding::None))
+            {
+                fl_rectf(x, y, w, h);
+                return;
+            }
+            int d = 2 * r;
+            fl_rectf(x + r, y, w - d, h);
+            fl_rectf(x, y + r, w, h - d);
+
+            if (corners & 1)
+                fl_pie(x, y, d, d, 90, 180);
+            else
+                fl_rectf(x, y, r, r);
+            if (corners & 2)
+                fl_pie(x + w - d, y, d, d, 0, 90);
+            else
+                fl_rectf(x + w - r, y, r, r);
+            if (corners & 4)
+                fl_pie(x + w - d, y + h - d, d, d, 270, 360);
+            else
+                fl_rectf(x + w - r, y + h - r, r, r);
+            if (corners & 8)
+                fl_pie(x, y + h - d, d, d, 180, 270);
+            else
+                fl_rectf(x, y + h - r, r, r);
         }
 
         inline void draw_rounded_frame_h(int x, int y, int w, int h,
@@ -35,6 +102,21 @@ namespace mui
             {
                 fl_color(activated_color(fc.in_top, active));
                 fl_rounded_rect(x + 1, y + 1, w - 2, h - 2, radius > 1 ? radius - 1 : 1);
+            }
+        }
+
+        inline void draw_rounded_frame_h_corners(int x, int y, int w, int h,
+                                                 const FrameColors &fc, int radius, bool active, int corners)
+        {
+            if (fc.out_top)
+            {
+                fl_color(activated_color(fc.out_top, active));
+                rounded_rect_corners(x, y, w, h, radius, corners);
+            }
+            if (fc.in_top)
+            {
+                fl_color(activated_color(fc.in_top, active));
+                rounded_rect_corners(x + 1, y + 1, w - 2, h - 2, radius > 1 ? radius - 1 : 1, corners);
             }
         }
 
@@ -207,6 +289,69 @@ namespace mui
                     dx = static_cast<int>(std::round(radius - std::sqrt(2.0 * radius * y_rel - y_rel * y_rel)));
                 }
                 fl_xyline(x + dx, y + i, x + w - 1 - dx);
+            }
+        }
+
+        inline void draw_rounded_gradient_box_corners(int x, int y, int w, int h,
+                                                      Fl_Color t_start, Fl_Color t_end,
+                                                      Fl_Color b_start, Fl_Color b_end,
+                                                      int radius, bool active, int corners)
+        {
+            if (t_start == 0 && t_end == 0 && b_start == 0 && b_end == 0)
+                return;
+
+            if (radius <= 1)
+            {
+                draw_smart_gradient_4(x, y, w, h, t_start, t_end, b_start, b_end, active);
+                return;
+            }
+
+            if (t_start == t_end && b_start == b_end && t_start == b_start)
+            {
+                fl_color(activated_color(t_start, active));
+                rounded_rectf_corners(x, y, w, h, radius, corners);
+                return;
+            }
+
+            radius = std::min({radius, w / 2, h / 2});
+            if (radius <= 0)
+            {
+                draw_smart_gradient_4(x, y, w, h, t_start, t_end, b_start, b_end, active);
+                return;
+            }
+
+            const int half_h = h / 2;
+            for (int i = 0; i < h; ++i)
+            {
+                Fl_Color c;
+                if (i < half_h)
+                {
+                    float t = 1.0f - static_cast<float>(i) / static_cast<float>(half_h > 0 ? half_h : 1);
+                    c = fl_color_average(t_start, t_end, t);
+                }
+                else
+                {
+                    float t = 1.0f - static_cast<float>(i - half_h) / static_cast<float>((h - half_h) > 0 ? (h - half_h) : 1);
+                    c = fl_color_average(b_start, b_end, t);
+                }
+                fl_color(activated_color(c, active));
+
+                int dx_left = 0, dx_right = 0;
+                if (i < radius)
+                {
+                    double y_rel = i + 0.5;
+                    int dx = static_cast<int>(std::round(radius - std::sqrt(2.0 * radius * y_rel - y_rel * y_rel)));
+                    if (corners & 1) dx_left = dx;
+                    if (corners & 2) dx_right = dx;
+                }
+                else if (i >= h - radius)
+                {
+                    double y_rel = (h - 1 - i) + 0.5;
+                    int dx = static_cast<int>(std::round(radius - std::sqrt(2.0 * radius * y_rel - y_rel * y_rel)));
+                    if (corners & 8) dx_left = dx;
+                    if (corners & 4) dx_right = dx;
+                }
+                fl_xyline(x + dx_left, y + i, x + w - 1 - dx_right);
             }
         }
 

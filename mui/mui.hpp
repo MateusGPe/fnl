@@ -18,3 +18,4 @@
 #include "UILock.hpp"
 #include "ValueSlider.hpp"
 #include "Widgets.hpp"
+#include "InputChoice.hpp"

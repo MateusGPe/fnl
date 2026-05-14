@@ -107,6 +107,33 @@ namespace mui
             }
         }
 
+        inline void draw_box_corners(int x, int y, int w, int h,
+                                     const Gradient4 &grad, const core::FrameColors &fc,
+                                     int inset, bool active, const ThemePalette &palette,
+                                     int corners)
+        {
+            if (palette.metrics.radius > 0)
+            {
+                if (fc.out_top)
+                {
+                    fl_color(core::activated_color(fc.out_top, active));
+                    core::rounded_rectf_corners(x, y, w, h, palette.metrics.radius, corners);
+                }
+                core::draw_rounded_gradient_box_corners(
+                    x + inset, y + inset, w - inset * 2, h - inset * 2,
+                    grad.t_start, grad.t_end, grad.b_start, grad.b_end,
+                    std::max(0, palette.metrics.radius - inset), active, corners);
+                core::draw_rounded_frame_h_corners(x, y, w, h, fc, palette.metrics.radius, active, corners);
+            }
+            else
+            {
+                core::draw_smart_gradient_4(
+                    x + inset, y + inset, w - inset * 2, h - inset * 2,
+                    grad.t_start, grad.t_end, grad.b_start, grad.b_end, active);
+                core::draw_solid_frame(x, y, w, h, fc, active);
+            }
+        }
+
         inline void draw_button(int x, int y, int w, int h,
                                 const WidgetState &state, const ThemePalette &palette)
         {
@@ -114,6 +141,33 @@ namespace mui
                                         ? palette.down_grad
                                         : (state.hovered ? palette.hover_grad : palette.btn_grad);
             draw_box(x, y, w, h, grad, palette.btn_frame, 2, state.active, palette);
+        }
+
+        inline void draw_button_left(int x, int y, int w, int h,
+                                     const WidgetState &state, const ThemePalette &palette)
+        {
+            const Gradient4 &grad = (state.value != 0.0)
+                                        ? palette.down_grad
+                                        : (state.hovered ? palette.hover_grad : palette.btn_grad);
+            draw_box_corners(x, y, w, h, grad, palette.btn_frame, 2, state.active, palette, static_cast<int>(core::Rounding::Left));
+        }
+
+        inline void draw_button_middle(int x, int y, int w, int h,
+                                       const WidgetState &state, const ThemePalette &palette)
+        {
+            const Gradient4 &grad = (state.value != 0.0)
+                                        ? palette.down_grad
+                                        : (state.hovered ? palette.hover_grad : palette.btn_grad);
+            draw_box_corners(x, y, w, h, grad, palette.btn_frame, 2, state.active, palette, static_cast<int>(core::Rounding::None));
+        }
+
+        inline void draw_button_right(int x, int y, int w, int h,
+                                      const WidgetState &state, const ThemePalette &palette)
+        {
+            const Gradient4 &grad = (state.value != 0.0)
+                                        ? palette.down_grad
+                                        : (state.hovered ? palette.hover_grad : palette.btn_grad);
+            draw_box_corners(x, y, w, h, grad, palette.btn_frame, 2, state.active, palette, static_cast<int>(core::Rounding::Right));
         }
 
         inline void draw_choice(int x, int y, int w, int h,

@@ -125,7 +125,7 @@ namespace mui
             }
         };
 
-        template <typename FlBase>
+        template <typename FlBase, bool HoverEffect = false>
         class HoverTracker : public FlBase
         {
         protected:
@@ -173,6 +173,29 @@ namespace mui
                     break;
                 }
                 return res;
+            }
+
+            void draw() override
+            {
+                if constexpr (HoverEffect)
+                {
+                    FlBase::draw();
+                    if (this->is_hovered)
+                    {
+                        const auto &palette = ThemeManager::get_palette();
+                        fl_color(palette.selection);
+                        fl_line_style(FL_SOLID, palette.metrics.focus_ring_width);
+                        if (palette.metrics.radius > 0)
+                            fl_rounded_rect(this->x() + 1, this->y() + 1, this->w() - 2, this->h() - 2, palette.metrics.radius);
+                        else
+                            fl_rect(this->x() + 1, this->y() + 1, this->w() - 2, this->h() - 2);
+                        fl_line_style(0);
+                    }
+                }
+                else
+                {
+                    FlBase::draw();
+                }
             }
         };
 
