@@ -3,6 +3,7 @@
 #include <FL/Fl_Button.H>
 #include <FL/Fl_Light_Button.H>
 #include <FL/Fl_Return_Button.H>
+#include <FL/Fl_Repeat_Button.H>
 #include <FL/Fl_Radio_Button.H>
 #include <FL/fl_draw.H>
 #include "Theme.hpp"
@@ -76,8 +77,7 @@ namespace mui
                 }
             }
 
-            fl_color(this->active_r() ? this->labelcolor()
-                                      : fl_inactive(this->labelcolor()));
+            fl_color(policy::resolve_color_active(this, this->labelcolor()));
             this->draw_label();
 
             fl_pop_clip();
@@ -86,7 +86,11 @@ namespace mui
     public:
         template <typename... Args>
         explicit StandardButtonDraw(Args &&...args)
-            : FlBase(std::forward<Args>(args)...) {}
+            : FlBase(std::forward<Args>(args)...)
+        {
+            if constexpr (std::is_base_of_v<Fl_Light_Button, FlBase>)
+                FlBase::align(FL_ALIGN_CENTER | FL_ALIGN_INSIDE);
+        }
 
         template <typename T, void (T::*Method)()>
         StandardButtonDraw &on_click(T *instance)
@@ -106,5 +110,5 @@ namespace mui
     using LightButton = StandardButtonDraw<HoverTracker<AutoThemed<CallbackRouter<Fl_Light_Button>>>>;
     using RadioButton = StandardButtonDraw<HoverTracker<AutoThemed<CallbackRouter<Fl_Radio_Button>>>>;
     using ReturnButton = StandardButtonDraw<HoverTracker<AutoThemed<CallbackRouter<Fl_Return_Button>>>>;
-
+    using RepeatButton = StandardButtonDraw<HoverTracker<AutoThemed<CallbackRouter<Fl_Repeat_Button>>>>;
 }

@@ -109,7 +109,7 @@ namespace mui
 
             engine::draw_button_right(x(), y(), w(), h(), btn_state, palette);
 
-            fl_color(active_r() ? palette.fg_main : fl_inactive(palette.fg_main));
+            fl_color(policy::resolve_color_active(this, palette.fg_main));
             const int arrow_x = x() + w() - 14;
             const int arrow_y = y() + (h() - 6) / 2;
             fl_polygon(arrow_x, arrow_y, arrow_x + 8, arrow_y, arrow_x + 4, arrow_y + 6);

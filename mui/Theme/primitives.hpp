@@ -10,6 +10,14 @@ namespace mui
 {
     namespace core
     {
+        [[nodiscard]] inline double normalize_value(double value, double min, double max)
+        {
+            const double range = max - min;
+            return (range != 0.0)
+                       ? std::clamp((value - min) / range, 0.0, 1.0)
+                       : 0.0;
+        }
+
         enum class Rounding
         {
             None = 0,

@@ -2,6 +2,7 @@
 #include <string>
 #include <cstdio>
 #include <vector>
+#include <cstdlib>
 #include <mui.hpp>
 #include <FL/Fl_Window.H>
 #include <mui/Theme/data.hpp>
@@ -70,6 +71,7 @@ private:
     mui::Wizard *m_wizard_handle = nullptr;
     mui::MenuBar *m_menu_bar_handle = nullptr;
     std::vector<std::string> m_theme_strings;
+    mui::Progress *m_progress_handle = nullptr;
 
 public:
     WidgetGallery()
@@ -178,6 +180,9 @@ public:
                              ->callback(on_generic_toggle, this)
                              ->value(1)
                              ->end();
+            auto *rrbtn = mui::build<mui::RepeatButton>("Repeat")
+                              ->callback(on_generic_toggle, this)
+                              ->end();
 
             auto *cbtn = mui::build<mui::CheckButton>("Check")
                              ->callback(on_generic_toggle, this)
@@ -210,11 +215,27 @@ public:
                            ->value(50)
                            ->end();
 
-            auto *prg = mui::build<mui::Progress>()
-                            ->minimum(0)
-                            ->maximum(100)
-                            ->value(65)
-                            ->end();
+            m_progress_handle = mui::build<mui::Progress>()
+                                    ->minimum(0)
+                                    ->maximum(100)
+                                    ->value(65)
+                                    ->rate(0.06)
+                                    ->step(0.05)
+                                    ->end();
+            // m_progress_handle->indeterminate(true);
+
+            auto *animate_prg_btn = mui::build<mui::RepeatButton>("Animate")
+                                        ->callback(
+                                            [](Fl_Widget *, void *data)
+                                            {
+                                                auto p = static_cast<mui::Progress *>(data);
+                                                if (p->value() < 100)
+                                                    p->value(int(p->value() + 1) % 101);
+                                                else
+                                                    p->value(0);
+                                            },
+                                            m_progress_handle)
+                                        ->end();
 
             auto *ic = mui::build<mui::InputChoice>()
                            ->add("Choice 1")
@@ -225,13 +246,13 @@ public:
             auto *tab1 = mui::make_vbox(
                 tx, ty, tw, th, 10,
                 mui::Fix(mui::make_header("Buttons & Toggles"), 20),
-                mui::Fix(mui::make_hbox(10, mui::Fix(btn, 80), mui::Fix(rbtn, 80), mui::Fix(lbtn, 80), mui::Spacer()), 30),
+                mui::Fix(mui::make_hbox(10, mui::Fix(btn, 80), mui::Fix(rbtn, 80), mui::Fix(lbtn, 80), mui::Fix(rrbtn, 80), mui::Spacer()), 30),
                 mui::Fix(mui::make_hbox(10, mui::Fix(cbtn, 80), mui::Fix(rad1, 80), mui::Fix(rad2, 80), mui::Spacer()), 30),
                 mui::Fix(mui::make_header("Inputs & Choices"), 20),
                 mui::Fix(mui::make_hbox(10, mui::Stretch(inp), mui::Stretch(sinp), mui::Stretch(ch), mui::Stretch(ic)), 30),
                 mui::Fix(mui::make_header("Sliders & Progress"), 20),
                 mui::Fix(mui::make_hbox(10, mui::Stretch(sl)), 30),
-                mui::Fix(mui::make_hbox(10, mui::Stretch(prg)), 25),
+                mui::Fix(mui::make_hbox(10, mui::Stretch(m_progress_handle), mui::Fix(animate_prg_btn, 80)), 30),
                 mui::Spacer());
             tab1->margin(20);
             tab1->label("Basic Controls");

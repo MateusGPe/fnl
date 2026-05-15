@@ -18,6 +18,17 @@ namespace mui
             double value = 0.0;
         };
 
+        namespace detail
+        {
+            // Helper to select the correct gradient based on button state.
+            [[nodiscard]] inline const Gradient4 &get_button_gradient(const WidgetState &state, const ThemePalette &palette)
+            {
+                return (state.value != 0.0)
+                           ? palette.down_grad
+                           : (state.hovered ? palette.hover_grad : palette.btn_grad);
+            }
+        } // namespace detail
+
         [[nodiscard]] inline Fl_Color get_text_color(bool active,
                                                      Fl_Color active_color,
                                                      Fl_Color parent_bg,
@@ -81,32 +92,6 @@ namespace mui
             draw_frame(x, y, w, h, fc, active, palette);
         }
 
-        inline void draw_box(int x, int y, int w, int h,
-                             const Gradient4 &grad, const core::FrameColors &fc,
-                             int inset, bool active, const ThemePalette &palette)
-        {
-            if (palette.metrics.radius > 0)
-            {
-                if (fc.out_top)
-                {
-                    fl_color(core::activated_color(fc.out_top, active));
-                    fl_rounded_rectf(x, y, w, h, palette.metrics.radius);
-                }
-                core::draw_rounded_gradient_box(
-                    x + inset, y + inset, w - inset * 2, h - inset * 2,
-                    grad.t_start, grad.t_end, grad.b_start, grad.b_end,
-                    std::max(0, palette.metrics.radius - inset), active);
-                core::draw_rounded_frame_h(x, y, w, h, fc, palette.metrics.radius, active);
-            }
-            else
-            {
-                core::draw_smart_gradient_4(
-                    x + inset, y + inset, w - inset * 2, h - inset * 2,
-                    grad.t_start, grad.t_end, grad.b_start, grad.b_end, active);
-                core::draw_solid_frame(x, y, w, h, fc, active);
-            }
-        }
-
         inline void draw_box_corners(int x, int y, int w, int h,
                                      const Gradient4 &grad, const core::FrameColors &fc,
                                      int inset, bool active, const ThemePalette &palette,
@@ -134,39 +119,38 @@ namespace mui
             }
         }
 
+        inline void draw_box(int x, int y, int w, int h,
+                             const Gradient4 &grad, const core::FrameColors &fc,
+                             int inset, bool active, const ThemePalette &palette)
+        {
+            draw_box_corners(x, y, w, h, grad, fc, inset, active, palette, static_cast<int>(core::Rounding::All));
+        }
+
         inline void draw_button(int x, int y, int w, int h,
                                 const WidgetState &state, const ThemePalette &palette)
         {
-            const Gradient4 &grad = (state.value != 0.0)
-                                        ? palette.down_grad
-                                        : (state.hovered ? palette.hover_grad : palette.btn_grad);
+            const auto &grad = detail::get_button_gradient(state, palette);
             draw_box(x, y, w, h, grad, palette.btn_frame, 2, state.active, palette);
         }
 
         inline void draw_button_left(int x, int y, int w, int h,
                                      const WidgetState &state, const ThemePalette &palette)
         {
-            const Gradient4 &grad = (state.value != 0.0)
-                                        ? palette.down_grad
-                                        : (state.hovered ? palette.hover_grad : palette.btn_grad);
+            const auto &grad = detail::get_button_gradient(state, palette);
             draw_box_corners(x, y, w, h, grad, palette.btn_frame, 2, state.active, palette, static_cast<int>(core::Rounding::Left));
         }
 
         inline void draw_button_middle(int x, int y, int w, int h,
                                        const WidgetState &state, const ThemePalette &palette)
         {
-            const Gradient4 &grad = (state.value != 0.0)
-                                        ? palette.down_grad
-                                        : (state.hovered ? palette.hover_grad : palette.btn_grad);
+            const auto &grad = detail::get_button_gradient(state, palette);
             draw_box_corners(x, y, w, h, grad, palette.btn_frame, 2, state.active, palette, static_cast<int>(core::Rounding::None));
         }
 
         inline void draw_button_right(int x, int y, int w, int h,
                                       const WidgetState &state, const ThemePalette &palette)
         {
-            const Gradient4 &grad = (state.value != 0.0)
-                                        ? palette.down_grad
-                                        : (state.hovered ? palette.hover_grad : palette.btn_grad);
+            const auto &grad = detail::get_button_gradient(state, palette);
             draw_box_corners(x, y, w, h, grad, palette.btn_frame, 2, state.active, palette, static_cast<int>(core::Rounding::Right));
         }
 
@@ -204,6 +188,30 @@ namespace mui
             fl_vertex(ax + aw, ay - ah);
             fl_end_line();
             fl_line_style(0);
+        }
+
+        inline void draw_slider_thumb_with_halo(
+            const Fl_Widget *widget, bool is_hovered, bool is_active,
+            int cx, int cy, Fl_Color thumb_color, const ThemePalette &palette)
+        {
+            if (is_active)
+            {
+                const float halo_op = palette.metrics.slider_thumb_hover_halo_opacity;
+
+                if (Fl::focus() == widget)
+                {
+                    core::draw_slider_halo(cx, cy,
+                                           palette.metrics.slider_thumb_focus_halo_size,
+                                           fl_color_average(palette.focus_ring, palette.bg_main, halo_op * 2.0f));
+                }
+                else if (is_hovered)
+                {
+                    core::draw_slider_halo(cx, cy,
+                                           palette.metrics.slider_thumb_focus_halo_size,
+                                           fl_color_average(palette.focus_ring, palette.bg_main, halo_op));
+                }
+            }
+            core::draw_slider_thumb(cx, cy, palette.metrics.slider_thumb_size, thumb_color);
         }
     }
 }

@@ -61,7 +61,7 @@ namespace mui
             if (const Fl_Menu_Item *m = mvalue())
                 m_last_label = m->text ? m->text : "";
 
-            fl_color(active_r() ? palette.fg_main : fl_inactive(palette.fg_main));
+            fl_color(policy::resolve_color_active(this, palette.fg_main));
             fl_font(textfont(), textsize());
             fl_draw(m_last_label.c_str(), x() + 6, y(), w() - 24, h(),
                     FL_ALIGN_LEFT | FL_ALIGN_INSIDE);

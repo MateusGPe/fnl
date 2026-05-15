@@ -34,12 +34,9 @@ namespace mui
             const int sl_w = std::max(0, w() - (is_horiz ? thumb_pad : 0));
             const int sl_h = std::max(0, h() - (is_horiz ? 0 : thumb_pad));
 
-            const double range = maximum() - minimum();
-            const double val = (range != 0.0)
-                                   ? std::clamp((value() - minimum()) / range, 0.0, 1.0)
-                                   : 0.0;
+            const double val = core::normalize_value(value(), minimum(), maximum());
 
-            const Fl_Color filled = active_r() ? palette.selection : fl_inactive(palette.selection);
+            const Fl_Color filled = policy::resolve_color_active(this, palette.selection);
 
             int cx, cy;
             core::calculate_slider_thumb_position_and_draw_track(
@@ -50,32 +47,9 @@ namespace mui
                 filled, palette.bg_sec,
                 cx, cy);
 
-            draw_halo_if_needed(cx, cy, palette);
-            core::draw_slider_thumb(cx, cy, palette.metrics.slider_thumb_size, filled);
+            engine::draw_slider_thumb_with_halo(this, is_hovered, active_r(), cx, cy, filled, palette);
 
             fl_pop_clip();
-        }
-
-    private:
-        void draw_halo_if_needed(int cx, int cy, const ThemePalette &palette) const
-        {
-            if (!active_r())
-                return;
-
-            const float halo_op = palette.metrics.slider_thumb_hover_halo_opacity;
-
-            if (Fl::focus() == this)
-            {
-                core::draw_slider_halo(cx, cy,
-                                       palette.metrics.slider_thumb_focus_halo_size,
-                                       fl_color_average(palette.focus_ring, palette.bg_main, halo_op * 2.0f));
-            }
-            else if (is_hovered)
-            {
-                core::draw_slider_halo(cx, cy,
-                                       palette.metrics.slider_thumb_focus_halo_size,
-                                       fl_color_average(palette.focus_ring, palette.bg_main, halo_op));
-            }
         }
 
     public:

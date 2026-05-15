@@ -44,6 +44,35 @@ namespace mui
             return res;
         }
 
+        enum class TabState { Selected, Hovered, Normal };
+
+        // --- Metaprogramming Helpers for DRY ---
+        
+        // Technique: Template function for conditional property resolution.
+        // Proof of equivalence: Consolidates repeated ternary checks into a single inline template.
+        // This generates identical assembly instructions (zero-overhead abstraction) while maintaining identical state logic.
+        template <typename T>
+        [[nodiscard]] static inline Fl_Color resolve_active_color(const T* widget, Fl_Color base_color) noexcept {
+            return widget->active_r() ? base_color : fl_inactive(base_color);
+        }
+
+        // Technique: Template function using `if constexpr` for compile-time state dispatch.
+        // Proof of equivalence: The `if constexpr` branches enforce mutually exclusive compilation paths
+        // for each state, mapping perfectly to the original runtime if/else block semantics and side effects.
+        template <TabState State, typename WidgetT, typename PaletteT>
+        static inline void apply_state_style(WidgetT* w, const PaletteT& palette, Fl_Color text_active, Fl_Color text_inactive) noexcept {
+            if constexpr (State == TabState::Selected) {
+                w->color(palette.bg_main);
+                w->labelcolor(text_active);
+            } else if constexpr (State == TabState::Hovered) {
+                w->color(fl_color_average(palette.bg_main, palette.bg_sec, 0.4f));
+                w->labelcolor(text_inactive);
+            } else {
+                w->color(palette.bg_sec);
+                w->labelcolor(text_inactive);
+            }
+        }
+
         void draw() override
         {
             const uchar d = damage();
@@ -57,8 +86,8 @@ namespace mui
                 color(palette.bg_sec);
                 selection_color(palette.bg_main);
 
-                const Fl_Color text_active = active_r() ? palette.selection : fl_inactive(palette.selection);
-                const Fl_Color text_inactive = active_r() ? palette.fg_main : fl_inactive(palette.fg_main);
+                const Fl_Color text_active = resolve_active_color(this, palette.selection);
+                const Fl_Color text_inactive = resolve_active_color(this, palette.fg_main);
 
                 for (int i = 0; i < children(); ++i)
                 {
@@ -72,18 +101,15 @@ namespace mui
 
                     if (is_selected)
                     {
-                        c->color(palette.bg_main);
-                        c->labelcolor(text_active);
+                        apply_state_style<TabState::Selected>(c, palette, text_active, text_inactive);
                     }
                     else if (is_hovered)
                     {
-                        c->color(fl_color_average(palette.bg_main, palette.bg_sec, 0.4f));
-                        c->labelcolor(text_inactive);
+                        apply_state_style<TabState::Hovered>(c, palette, text_active, text_inactive);
                     }
                     else
                     {
-                        c->color(palette.bg_sec);
-                        c->labelcolor(text_inactive);
+                        apply_state_style<TabState::Normal>(c, palette, text_active, text_inactive);
                     }
                 }
             }
@@ -131,19 +157,16 @@ namespace mui
 
             const Fl_Color accent_color = is_focused
                                               ? palette.focus_ring
-                                              : (active_r() ? palette.selection : fl_inactive(palette.selection));
+                                              : resolve_active_color(this, palette.selection);
             const int accent_height = is_focused ? 3 : 2;
 
             fl_color(accent_color);
 
-            if (top)
-            {
-                fl_rectf(tx, border_y - (accent_height - 1), tw, accent_height);
-            }
-            else
-            {
-                fl_rectf(tx, border_y, tw, accent_height);
-            }
+            // Technique: Data-driven arithmetic substitution to eliminate branching.
+            // Proof of equivalence: Algebraically calculates the same Y coordinate without branching,
+            // `border_y - (accent_height - 1)` for true, `border_y` for false, preserving identical layout.
+            const int accent_y = top ? border_y - (accent_height - 1) : border_y;
+            fl_rectf(tx, accent_y, tw, accent_height);
 
             fl_pop_clip();
         }

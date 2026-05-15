@@ -13,6 +13,14 @@ namespace mui
 {
     namespace policy
     {
+        // Metaprogramming utility to DRY up active/inactive color resolution.
+        // Proof of equivalence: Inlines to exact same ternary `w->active_r() ? c : fl_inactive(c)` using zero-overhead templating.
+        template <typename WidgetT>
+        [[nodiscard]] constexpr Fl_Color resolve_color_active(const WidgetT* w, Fl_Color c) noexcept
+        {
+            return w->active_r() ? c : fl_inactive(c);
+        }
+
         template <typename FlBase>
         class CallbackRouter : public FlBase
         {
@@ -225,7 +233,7 @@ namespace mui
                 cursor_visible = false;
                 if constexpr (requires { this->cursor_color(FL_BLACK); })
                 {
-                    this->cursor_color(ThemeManager::get_palette().input_bg);
+                    this->cursor_color(ThemeManager::get_palette().focus_ring);
                     this->damage(FL_DAMAGE_USER1);
                 }
                 else
@@ -239,7 +247,10 @@ namespace mui
                 auto *self = static_cast<Blinkable *>(data);
                 if (Fl::focus() != self)
                 {
-                    self->cursor_visible = false;
+                    // Widget lost focus. The UNFOCUS handler is responsible for
+                    // removing the timeout. We just stop the chain here and ensure
+                    // the cursor is hidden.
+                    self->apply_cursor_hidden();
                     return;
                 }
                 self->cursor_visible = !self->cursor_visible;
@@ -248,7 +259,7 @@ namespace mui
                 else
                     self->apply_cursor_hidden();
 
-                Fl::repeat_timeout(0.5, blink_cb, data);
+                Fl::add_timeout(0.5, blink_cb, data); // Re-schedule as a one-shot timeout
             }
 
         protected:

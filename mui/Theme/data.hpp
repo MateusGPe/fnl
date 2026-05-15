@@ -30,7 +30,7 @@ namespace mui
 
     struct ThemeMetrics
     {
-        int radius = 5;
+        int radius = 6;
         float focus_ring_opacity = 0.2f;
         int focus_ring_width = 1;
         int choice_arrow_padding = 14;

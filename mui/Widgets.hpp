@@ -45,21 +45,30 @@ namespace mui
     using HelpView = Focusable<CallbackRouter<Fl_Help_View>>;
     using MenuButton = Focusable<CallbackRouter<Fl_Menu_Button>>;
 
-    using MultilineOutput = HoverTracker<Focusable<CallbackRouter<Fl_Multiline_Output>>, true>;
+    using MultilineOutput = Focusable<CallbackRouter<Fl_Multiline_Output>>;
     using Output = HoverTracker<Focusable<CallbackRouter<Fl_Output>>, true>;
-    using Input = HoverTracker<Focusable<CallbackRouter<Fl_Input>>, true>;
-    using SecretInput = HoverTracker<Focusable<CallbackRouter<Fl_Secret_Input>>, true>;
-
-    using RepeatButton = HoverTracker<Focusable<CallbackRouter<Fl_Repeat_Button>>, true>;
-    using Roller = HoverTracker<Focusable<CallbackRouter<Fl_Roller>>, true>;
-    using TextEditor = HoverTracker<Focusable<CallbackRouter<Fl_Text_Editor>>, true>;
+    using SecretInput = Blinkable<HoverTracker<Focusable<CallbackRouter<Fl_Secret_Input>>, true>>;
+    
+    using Input = Blinkable<HoverTracker<Focusable<CallbackRouter<Fl_Input>>, true>>;
     using ValueInput = HoverTracker<Focusable<CallbackRouter<Fl_Value_Input>>, true>;
+    using Roller = HoverTracker<Focusable<CallbackRouter<Fl_Roller>>, true>;
+    using TextEditor = Focusable<CallbackRouter<Fl_Text_Editor>>;
     using ValueOutput = HoverTracker<Focusable<CallbackRouter<Fl_Value_Output>>, true>;
     using Chart = HoverTracker<Focusable<CallbackRouter<Fl_Chart>>, true>;
-    using CheckButton = HoverTracker<Focusable<CallbackRouter<Fl_Check_Button>>, true>;
     using Clock = HoverTracker<Focusable<CallbackRouter<Fl_Clock>>, true>;
-    using Counter = HoverTracker<Focusable<CallbackRouter<Fl_Counter>>, true>;
+    using Counter = Focusable<CallbackRouter<Fl_Counter>>;
     using Dial = HoverTracker<Focusable<CallbackRouter<Fl_Dial>>, true>;
+
+    class CheckButton : public HoverTracker<Focusable<CallbackRouter<Fl_Check_Button>>, true>
+    {
+    public:
+        CheckButton(int x, int y, int w, int h, const char *label = nullptr)
+            : HoverTracker<Focusable<CallbackRouter<Fl_Check_Button>>, true>(x, y, w, h, label)
+        {
+            box(FL_FLAT_BOX);
+        }
+    };
+
 
     using Table = Fl_Table;
     using Flex = Fl_Flex;
