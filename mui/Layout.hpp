@@ -7,27 +7,6 @@
 
 namespace mui
 {
-    // --- Geometry Fallback ---
-    // Grabs dimensions from the current active group to ensure layout
-    // engines like Flex have non-zero geometry to calculate correctly.
-    inline void get_default_bounds(int &x, int &y, int &w, int &h)
-    {
-        if (Group *p = Group::current())
-        {
-            x = p->x();
-            y = p->y();
-            w = p->w();
-            h = p->h();
-        }
-        else
-        {
-            x = 10;
-            y = 10;
-            w = 100;
-            h = 100;
-        }
-    }
-
     // --- Fluent Builder API ---
     // Uses CRTP and returns std::shared_ptr<Derived> to allow safe, chained initializations.
     template <typename T, typename Derived>
@@ -113,39 +92,29 @@ namespace mui
 
     // Main build factory
     template <typename T>
-    std::shared_ptr<WidgetBuilder<T>> build(const char *label = nullptr, int x = -1, int y = -1, int w = -1, int h = -1)
+    std::shared_ptr<WidgetBuilder<T>> build(const char *label = nullptr, int x = 0, int y = 0, int w = 0, int h = 0)
     {
-        if (x == -1 && y == -1 && w == -1 && h == -1)
-        {
-            get_default_bounds(x, y, w, h);
-        }
         return std::make_shared<WidgetBuilder<T>>(new T(x, y, w, h, label));
     }
 
     // --- Legacy Make Factory ---
     template <typename T, typename SetupFunc>
-    T *make(SetupFunc &&setup, const char *label = nullptr, int x = -1, int y = -1, int w = -1, int h = -1)
+    T *make(SetupFunc &&setup, const char *label = nullptr, int x = 0, int y = 0, int w = 0, int h = 0)
     {
-        if (x == -1 && y == -1 && w == -1 && h == -1)
-            get_default_bounds(x, y, w, h);
         T *widget = new T(x, y, w, h, label);
         setup(widget);
         return widget;
     }
 
     template <typename T>
-    T *make(const char *label = nullptr, int x = -1, int y = -1, int w = -1, int h = -1)
+    T *make(const char *label = nullptr, int x = 0, int y = 0, int w = 0, int h = 0)
     {
-        if (x == -1 && y == -1 && w == -1 && h == -1)
-            get_default_bounds(x, y, w, h);
         return new T(x, y, w, h, label);
     }
 
     template <typename T>
-    T *make(T *&widget, const char *label = nullptr, int x = -1, int y = -1, int w = -1, int h = -1)
+    T *make(T *&widget, const char *label = nullptr, int x = 0, int y = 0, int w = 0, int h = 0)
     {
-        if (x == -1 && y == -1 && w == -1 && h == -1)
-            get_default_bounds(x, y, w, h);
         widget = new T(x, y, w, h, label);
         return widget;
     }
@@ -193,21 +162,13 @@ namespace mui
     template <typename... Items>
     Flex *make_hbox(int w, int h, int gap, Items... items)
     {
-        int x = 0, y = 0, dummy_w, dummy_h;
-        if (Group *p = Group::current())
-        {
-            x = p->x();
-            y = p->y();
-        }
-        return make_hbox(x, y, w, h, gap, std::forward<Items>(items)...);
+        return make_hbox(0, 0, w, h, gap, std::forward<Items>(items)...);
     }
 
     template <typename... Items>
     Flex *make_hbox(int gap, Items... items)
     {
-        int x, y, w, h;
-        get_default_bounds(x, y, w, h);
-        return make_hbox(x, y, w, h, gap, std::forward<Items>(items)...);
+        return make_hbox(0, 0, 0, 0, gap, std::forward<Items>(items)...);
     }
 
     template <typename... Items>
@@ -226,21 +187,13 @@ namespace mui
     template <typename... Items>
     Flex *make_vbox(int w, int h, int gap, Items... items)
     {
-        int x = 0, y = 0, dummy_w, dummy_h;
-        if (Group *p = Group::current())
-        {
-            x = p->x();
-            y = p->y();
-        }
-        return make_vbox(x, y, w, h, gap, std::forward<Items>(items)...);
+        return make_vbox(0, 0, w, h, gap, std::forward<Items>(items)...);
     }
 
     template <typename... Items>
     Flex *make_vbox(int gap, Items... items)
     {
-        int x, y, w, h;
-        get_default_bounds(x, y, w, h);
-        return make_vbox(x, y, w, h, gap, std::forward<Items>(items)...);
+        return make_vbox(0, 0, 0, 0, gap, std::forward<Items>(items)...);
     }
 
 #define MUI_MAKE_CONTAINER_HELPER(TypeName, FuncName)                                     \
@@ -257,20 +210,12 @@ namespace mui
     template <typename... Widgets>                                                        \
     TypeName *FuncName(int w, int h, Widgets *...widgets)                                 \
     {                                                                                     \
-        int x = 0, y = 0, dummy_w, dummy_h;                                               \
-        if (Group *p = Group::current())                                            \
-        {                                                                                 \
-            x = p->x();                                                                   \
-            y = p->y();                                                                   \
-        }                                                                                 \
-        return FuncName(x, y, w, h, widgets...);                                          \
+        return FuncName(0, 0, w, h, widgets...);                                          \
     }                                                                                     \
     template <typename... Widgets>                                                        \
     TypeName *FuncName(Widgets *...widgets)                                               \
     {                                                                                     \
-        int x, y, w, h;                                                                   \
-        get_default_bounds(x, y, w, h);                                                   \
-        return FuncName(x, y, w, h, widgets...);                                          \
+        return FuncName(0, 0, 0, 0, widgets...);                                          \
     }
 
     MUI_MAKE_CONTAINER_HELPER(Group, make_group)
@@ -410,20 +355,12 @@ namespace mui
     template <typename... Args>
     Grid *make_grid(int w, int h, Args... args)
     {
-        int x = 0, y = 0, dummy_w, dummy_h;
-        if (Group *p = Group::current())
-        {
-            x = p->x();
-            y = p->y();
-        }
-        return make_grid(x, y, w, h, std::forward<Args>(args)...);
+        return make_grid(0, 0, w, h, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
     Grid *make_grid(Args... args)
     {
-        int x, y, w, h;
-        get_default_bounds(x, y, w, h);
-        return make_grid(x, y, w, h, std::forward<Args>(args)...);
+        return make_grid(0, 0, 0, 0, std::forward<Args>(args)...);
     }
 }

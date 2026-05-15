@@ -9,29 +9,32 @@ class AppWindow : public Fl_Double_Window
 public:
     AppWindow(int w, int h, const char *title) : Fl_Double_Window(w, h, title)
     {
+        end();
+
         auto *layer_tree = mui::make<mui::Tree>();
         auto *viewer = mui::make<mui::ImageViewer>();
         auto *btn_new = mui::make<mui::Button>("New");
         auto *btn_open = mui::make<mui::Button>("Open");
         auto *btn_save = mui::make<mui::Button>("Save");
         auto *tool_mode = mui::make<mui::Choice>("Select Tool");
-
-        mui::ValueSlider *sl_opacity;
-        mui::Spinner *sp_radius;
-        mui::Button *btn_apply;
+        auto *sl_opacity = mui::make<mui::ValueSlider>();
+        auto *sp_radius = mui::make<mui::Spinner>();
+        auto *btn_apply = mui::make<mui::Button>("Apply Filter");
 
         viewer->grid(true);
+        sl_opacity->type(FL_HOR_SLIDER);
+        sl_opacity->align(FL_ALIGN_TOP_LEFT);
+        sp_radius->align(FL_ALIGN_TOP_LEFT);
 
         Fl_Grid *grid = mui::make_grid(
             w, h,
             mui::Layout(2, 3),
-            mui::Margin(10),
-            mui::Gap(10),
+            mui::Margin(6),
+            mui::Gap(5),
             mui::ColWeights(0, 1, 0),
-            mui::RowWeights(0, 1),
             mui::ColWidths(200, 0, 220),
             mui::RowHeights(35),
-
+            mui::RowWeights(0, 1),
             mui::Cell(
                 mui::make_hbox(
                     8,
@@ -46,18 +49,15 @@ public:
             mui::Cell(
                 mui::make_vbox(
                     12,
-                    mui::Fix(mui::make<mui::ValueSlider>(sl_opacity), 30),
-                    mui::Fix(mui::make<mui::Spinner>(sp_radius), 30),
-                    mui::Fix(mui::make<mui::Button>(btn_apply, "Apply Filter"), 35),
+                    mui::Fix(sl_opacity, 30),
+                    mui::Fix(sp_radius, 30),
+                    mui::Fix(btn_apply, 35),
                     mui::Spacer()),
                 1, 2));
 
-        sl_opacity->type(FL_HOR_SLIDER);
-        sl_opacity->align(FL_ALIGN_TOP_LEFT);
-        sp_radius->align(FL_ALIGN_TOP_LEFT);
-
-        this->resizable(grid);
-        this->size_range(600, 400);
+        add(grid);
+        resizable(grid);
+        size_range(w, h);
     }
 };
 
@@ -66,7 +66,7 @@ int main(int argc, char **argv)
     mui::System::init_threads();
     mui::Theme::apply();
 
-    AppWindow *win = new AppWindow(1024, 768, "MUI Responsive App Shell");
+    AppWindow *win = new AppWindow(600, 400, "MUI Responsive App Shell");
 
     win->show(argc, argv);
 
