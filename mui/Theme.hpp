@@ -12,6 +12,46 @@
 
 namespace mui
 {
+
+    inline Fl_Color lerp_rgb(Fl_Color from_color, Fl_Color to_color, float weight)
+    {
+        unsigned char r1, g1, b1, r2, g2, b2;
+        Fl::get_color(from_color, r1, g1, b1);
+        Fl::get_color(to_color, r2, g2, b2);
+        auto lerp_c = [](unsigned char c1, unsigned char c2, float w)
+        {
+            return static_cast<unsigned char>(std::clamp(c1 + (static_cast<float>(c2) - c1) * w, 0.0f, 255.0f));
+        };
+        return fl_rgb_color(lerp_c(r1, r2, weight), lerp_c(g1, g2, weight), lerp_c(b1, b2, weight));
+    }
+
+    inline Fl_Color lerp_rgb(Fl_Color c1, Fl_Color c2, Fl_Color c3, float weight)
+    {
+        const float t = std::clamp(weight, 0.0f, 1.0f);
+
+        unsigned char r1, g1, b1, r2, g2, b2, r3, g3, b3;
+        Fl::get_color(c1, r1, g1, b1);
+        Fl::get_color(c2, r2, g2, b2);
+        Fl::get_color(c3, r3, g3, b3);
+
+        // Pre-calculate quadratic Bezier coefficients
+        const float t2 = t * t;
+        const float one_minus_t = 1.0f - t;
+        const float one_minus_t_2 = one_minus_t * one_minus_t;
+        const float two_t_one_minus_t = 2.0f * t * one_minus_t;
+
+        auto bezier_c = [&](unsigned char p0, unsigned char p1, unsigned char p2)
+        {
+            const float val = one_minus_t_2 * p0 +
+                              two_t_one_minus_t * p1 +
+                              t2 * p2;
+            return static_cast<unsigned char>(std::clamp(val, 0.0f, 255.0f));
+        };
+
+        return fl_rgb_color(bezier_c(r1, r2, r3),
+                            bezier_c(g1, g2, g3),
+                            bezier_c(b1, b2, b3));
+    }
     namespace Theme::schemes
     {
         inline constexpr Fl_Boxtype BG_BOX = static_cast<Fl_Boxtype>(FL_FREE_BOXTYPE);
@@ -179,6 +219,38 @@ namespace mui
             fl_pie(x, y, w, h, 0.0, 360.0);
             fl_color(core::activated_color(ThemeManager::get_palette().input_frame.out_top, active));
             fl_arc(x, y, w, h, 0.0, 360.0);
+        }
+
+        static inline Fl_Color draw_ring(Fl_Widget *self, const bool is_hovered, const bool is_focused)
+        {
+            Fl_Color c = 0;
+            if (is_hovered || is_focused)
+            {
+                const auto &palette = ThemeManager::get_palette();
+                const int flag = is_hovered | ((is_focused && 1) << 1);
+
+                switch (flag)
+                {
+                case 2:
+                    c = fl_color_average(palette.focus_ring, palette.selection, 0.5f);
+                    break;
+                case 3:
+                    c = palette.focus_ring;
+                    break;
+                default:
+                    c = palette.selection;
+                    break;
+                }
+
+                fl_color(c);
+                fl_line_style(FL_SOLID, palette.metrics.focus_ring_width);
+                if (palette.metrics.radius > 0)
+                    fl_rounded_rect(self->x(), self->y(), self->w(), self->h(), palette.metrics.radius);
+                else
+                    fl_rect(self->x(), self->y(), self->w(), self->h());
+                fl_line_style(0);
+            }
+            return c;
         }
     }
 

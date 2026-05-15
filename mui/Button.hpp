@@ -6,6 +6,7 @@
 #include <FL/Fl_Repeat_Button.H>
 #include <FL/Fl_Radio_Button.H>
 #include <FL/fl_draw.H>
+#include <FL/Fl_Check_Button.H>
 #include "Theme.hpp"
 
 #include <type_traits>
@@ -48,33 +49,15 @@ namespace mui
                 fl_draw_box(draw_b, this->x(), this->y(), this->w(), this->h(), draw_c);
             }
 
-            if (Fl::focus() == this)
+            if constexpr ((std::is_base_of_v<Fl_Light_Button, FlBase> ||
+                           std::is_base_of_v<Fl_Radio_Button, FlBase>) &&
+                          requires { this->is_hovered; })
             {
-                fl_color(palette.focus_ring);
-                fl_line_style(FL_SOLID, palette.metrics.focus_ring_width);
-                if (palette.metrics.radius > 0)
-                    fl_rounded_rect(this->x() + 1, this->y() + 1, this->w() - 2, this->h() - 2, palette.metrics.radius);
-                else
-                    fl_rect(this->x() + 1, this->y() + 1, this->w() - 2, this->h() - 2);
-                fl_line_style(0);
+                engine::draw_ring(this, this->is_hovered, Fl::focus() == this);
             }
-
-            if constexpr (requires { this->is_hovered; })
+            else
             {
-                if constexpr (std::is_base_of_v<Fl_Light_Button, FlBase> ||
-                              std::is_base_of_v<Fl_Radio_Button, FlBase>)
-                {
-                    if (this->is_hovered && this->value())
-                    {
-                        fl_color(palette.selection);
-                        fl_line_style(FL_SOLID, palette.metrics.focus_ring_width);
-                        if (palette.metrics.radius > 0)
-                            fl_rounded_rect(this->x() + 1, this->y() + 1, this->w() - 2, this->h() - 2, palette.metrics.radius);
-                        else
-                            fl_rect(this->x() + 1, this->y() + 1, this->w() - 2, this->h() - 2);
-                        fl_line_style(0);
-                    }
-                }
+                engine::draw_ring(this, false, Fl::focus() == this);
             }
 
             fl_color(policy::resolve_color_active(this, this->labelcolor()));
@@ -103,6 +86,18 @@ namespace mui
         {
             this->bind_callback(std::move(handler));
             return *this;
+        }
+    };
+    
+    class CheckButton : public RingHover<CallbackRouter<Fl_Check_Button>>
+    {
+    public:
+        using FlBase = RingHover<CallbackRouter<Fl_Check_Button>>;
+
+        template <typename... Args>
+        explicit CheckButton(Args &&...args) : FlBase(std::forward<Args>(args)...)
+        {
+            box(FL_FLAT_BOX);
         }
     };
 

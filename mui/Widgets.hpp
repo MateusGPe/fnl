@@ -3,7 +3,6 @@
 
 #include <FL/Fl_Adjuster.H>
 #include <FL/Fl_Chart.H>
-#include <FL/Fl_Check_Button.H>
 #include <FL/Fl_Clock.H>
 #include <FL/Fl_Counter.H>
 #include <FL/Fl_Dial.H>
@@ -39,35 +38,23 @@
 namespace mui
 {
     using namespace policy;
-    using Window = Focusable<CallbackRouter<Fl_Window>>;
     using Adjuster = Focusable<CallbackRouter<Fl_Adjuster>>;
-    using DoubleWindow = Focusable<CallbackRouter<Fl_Double_Window>>;
     using HelpView = Focusable<CallbackRouter<Fl_Help_View>>;
     using MenuButton = Focusable<CallbackRouter<Fl_Menu_Button>>;
 
     using MultilineOutput = Focusable<CallbackRouter<Fl_Multiline_Output>>;
-    using Output = HoverTracker<Focusable<CallbackRouter<Fl_Output>>, true>;
-    using SecretInput = Blinkable<HoverTracker<Focusable<CallbackRouter<Fl_Secret_Input>>, true>>;
-    
-    using Input = Blinkable<HoverTracker<Focusable<CallbackRouter<Fl_Input>>, true>>;
-    using ValueInput = HoverTracker<Focusable<CallbackRouter<Fl_Value_Input>>, true>;
-    using Roller = HoverTracker<Focusable<CallbackRouter<Fl_Roller>>, true>;
-    using TextEditor = Focusable<CallbackRouter<Fl_Text_Editor>>;
-    using ValueOutput = HoverTracker<Focusable<CallbackRouter<Fl_Value_Output>>, true>;
-    using Chart = HoverTracker<Focusable<CallbackRouter<Fl_Chart>>, true>;
-    using Clock = HoverTracker<Focusable<CallbackRouter<Fl_Clock>>, true>;
     using Counter = Focusable<CallbackRouter<Fl_Counter>>;
-    using Dial = HoverTracker<Focusable<CallbackRouter<Fl_Dial>>, true>;
+    using TextEditor = Focusable<CallbackRouter<Fl_Text_Editor>>;
 
-    class CheckButton : public HoverTracker<Focusable<CallbackRouter<Fl_Check_Button>>, true>
-    {
-    public:
-        CheckButton(int x, int y, int w, int h, const char *label = nullptr)
-            : HoverTracker<Focusable<CallbackRouter<Fl_Check_Button>>, true>(x, y, w, h, label)
-        {
-            box(FL_FLAT_BOX);
-        }
-    };
+    using Output = RingHover<CallbackRouter<Fl_Output>>;
+    using SecretInput = Blinkable<RingHover<CallbackRouter<Fl_Secret_Input>>>;
+    using Input = Blinkable<RingHover<CallbackRouter<Fl_Input>>>;
+    using ValueInput = RingHover<CallbackRouter<Fl_Value_Input>>;
+    using Roller = RingHover<CallbackRouter<Fl_Roller>>;
+    using ValueOutput = RingHover<CallbackRouter<Fl_Value_Output>>;
+    using Chart = RingHover<CallbackRouter<Fl_Chart>>;
+    using Clock = RingHover<CallbackRouter<Fl_Clock>>;
+    using Dial = RingHover<CallbackRouter<Fl_Dial>>;
 
 
     using Table = Fl_Table;

@@ -16,7 +16,7 @@ namespace mui
         // Metaprogramming utility to DRY up active/inactive color resolution.
         // Proof of equivalence: Inlines to exact same ternary `w->active_r() ? c : fl_inactive(c)` using zero-overhead templating.
         template <typename WidgetT>
-        [[nodiscard]] constexpr Fl_Color resolve_color_active(const WidgetT* w, Fl_Color c) noexcept
+        [[nodiscard]] constexpr Fl_Color resolve_color_active(const WidgetT *w, Fl_Color c) noexcept
         {
             return w->active_r() ? c : fl_inactive(c);
         }
@@ -298,6 +298,57 @@ namespace mui
                     break;
                 }
                 return res;
+            }
+        };
+
+        template <typename FlBase>
+        class RingHover : public FlBase
+        {
+        protected:
+            bool is_hovered = false;
+
+        public:
+            template <typename... Args>
+            explicit RingHover(Args &&...args) : FlBase(std::forward<Args>(args)...) {}
+
+            int handle(int event) override
+            {
+                const int res = FlBase::handle(event);
+                switch (event)
+                {
+                case FL_ENTER:
+                    is_hovered = true;
+                    this->redraw();
+                    break;
+                case FL_LEAVE:
+                    is_hovered = false;
+                    this->redraw();
+                    break;
+                case FL_FOCUS:
+                case FL_UNFOCUS:
+                    this->redraw();
+                    break;
+                default:
+                    break;
+                }
+                return res;
+            }
+
+            void draw() override
+            {
+                const bool is_focused = (Fl::focus() == this && FlBase::visible_focus() && Fl::visible_focus());
+
+                if constexpr (std::is_base_of_v<Fl_Input_, FlBase> || std::is_base_of_v<Fl_Text_Display, FlBase>)
+                {
+                    FlBase::draw();
+                }
+                else
+                {
+                    FlBase::visible_focus(false);
+                    FlBase::draw();
+                    FlBase::visible_focus(is_focused);
+                }
+                engine::draw_ring(this, is_hovered, is_focused);
             }
         };
     }

@@ -19,8 +19,10 @@ namespace mui
             input_.textcolor(palette.fg_main);
 
             if (damage() & ~FL_DAMAGE_CHILD)
-                fl_draw_box(Theme::schemes::ROUNDED_INPUT_THIN_DOWN_BOX,
-                            x(), y(), w(), h(), palette.input_bg);
+            {
+                fl_draw_box(FL_FLAT_BOX, this->x(), this->y(), this->w(), this->h(), palette.bg_main);
+                fl_draw_box(Theme::schemes::ROUNDED_INPUT_THIN_DOWN_BOX, x(), y(), w(), h(), palette.input_bg);
+            }
 
             fl_push_clip(input_.x(), input_.y(), input_.w(), input_.h());
             draw_child(input_);
@@ -40,37 +42,20 @@ namespace mui
             engine::draw_button_right(btn_x, btn_y, btn_w, btn_h, btn_state, palette);
 
             fl_color(fl_color_average(palette.btn_frame.out_top, palette.input_bg, 0.5f));
-            fl_line(btn_x, up_button_.y() + up_button_.h(), btn_x + btn_w - 1, up_button_.y() + up_button_.h());
+            fl_line(btn_x, up_button_.y() + up_button_.h(), btn_x + btn_w - 2, up_button_.y() + up_button_.h());
+            fl_line(btn_x, btn_y + 1, btn_x, btn_y + btn_h - 2);
 
             draw_arrow(up_button_, true, palette);
             draw_arrow(down_button_, false, palette);
 
             const bool is_focused = (Fl::focus() == this || contains(Fl::focus()));
-            if (is_focused)
+            auto c = engine::draw_ring(this, is_hovered, is_focused);
+            if (c != 0)
             {
-                engine::draw_focus_ring(x(), y(), w(), h(),
-                                        palette.focus_ring, palette.metrics.focus_ring_opacity,
-                                        palette.metrics.focus_ring_width, palette.metrics.radius);
-
-                // Draw separator line on focus, on the edge of the button
                 fl_line_style(FL_SOLID, palette.metrics.focus_ring_width);
-                fl_color(palette.focus_ring);
-                const int sep_x = up_button_.x();
-                fl_line(sep_x, y() + 2, sep_x, y() + h() - 2);
-                fl_line_style(0);
-            }
-            if (this->is_hovered)
-            {
-                engine::draw_focus_ring(x() + 1, y() + 1, w() - 2, h() - 2, palette.selection,
-                                        palette.metrics.focus_ring_opacity,
-                                        palette.metrics.focus_ring_width,
-                                        palette.metrics.radius);
-
-                // Draw separator line on hover, in the gap
-                fl_line_style(FL_SOLID, palette.metrics.focus_ring_width);
-                fl_color(palette.selection);
-                const int sep_x = up_button_.x();
-                fl_line(sep_x - 1, y() + 2, sep_x - 1, y() + h() - 2);
+                fl_color(c);
+                fl_line(btn_x, btn_y, btn_x, btn_y + btn_h);
+                fl_line(btn_x, btn_y + btn_h / 2, btn_x + btn_w, btn_y + btn_h / 2);
                 fl_line_style(0);
             }
         }

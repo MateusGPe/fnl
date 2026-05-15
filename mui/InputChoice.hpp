@@ -205,6 +205,7 @@ namespace mui
         {
             const auto &palette = ThemeManager::get_palette();
 
+            fl_push_clip(x(), y(), w(), h());
             if (damage() & ~FL_DAMAGE_CHILD)
             {
                 inp_->color(palette.input_bg);
@@ -219,31 +220,17 @@ namespace mui
             draw_child(*menu_);
 
             const bool is_focused = ((Fl::focus() == inp_ || Fl::focus() == menu_) && visible_focus() && Fl::visible_focus());
-            if (is_focused)
-            {
-                engine::draw_focus_ring(x(), y(), w(), h(), palette.focus_ring,
-                                        palette.metrics.focus_ring_opacity,
-                                        palette.metrics.focus_ring_width,
-                                        palette.metrics.radius);
 
+            auto c = engine::draw_ring(this, this->is_hovered, is_focused);
+            if (c != 0)
+            {
                 fl_line_style(FL_SOLID, palette.metrics.focus_ring_width);
-                fl_color(palette.focus_ring);
+                fl_color(c);
                 fl_line(menu_->x(), menu_->y(), menu_->x(), menu_->y() + menu_->h());
                 fl_line_style(0);
             }
-            if (this->is_hovered)
-            {
-                engine::draw_focus_ring(x() + 1, y() + 1, w() - 2, h() - 2, palette.selection,
-                                        palette.metrics.focus_ring_opacity,
-                                        palette.metrics.focus_ring_width,
-                                        palette.metrics.radius);
-                fl_line_style(FL_SOLID, palette.metrics.focus_ring_width);
-                fl_color(palette.selection);
-                fl_line(menu_->x()-1, menu_->y()+1, menu_->x()-1, menu_->y() + menu_->h()-1);
-                fl_line_style(0);
-            }
-
             draw_label();
+            fl_pop_clip();
         }
 
         int handle(int e) override
