@@ -2,7 +2,7 @@
 
 #include <string>
 #include <memory>
-#include "../Image.hpp"
+#include "Image.hpp"
 
 namespace mui
 {

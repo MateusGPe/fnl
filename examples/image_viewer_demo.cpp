@@ -4,6 +4,7 @@
 #include <fstream>
 #include <mui.hpp>
 #include <mui/Theme/data.hpp>
+#include "mui_img/ImageViewer.hpp"
 #include <FL/Fl_Menu_Bar.H>
 #include <FL/Fl_Box.H>
 #include <FL/Fl_Output.H>

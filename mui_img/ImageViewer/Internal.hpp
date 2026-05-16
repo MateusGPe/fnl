@@ -2,7 +2,7 @@
 
 #include "Types.hpp"
 #include "Commands.hpp"
-#include "../Theme.hpp"
+#include "Theme.hpp"
 #include <FL/Fl.H>
 #include <FL/Fl_Widget.H>
 #include <FL/fl_draw.H>

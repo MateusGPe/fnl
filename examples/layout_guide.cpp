@@ -2,6 +2,7 @@
 #include <FL/Fl_Double_Window.H>
 #include <FL/Fl_Grid.H>
 #include <FL/Fl_Flex.H>
+#include "mui_img/ImageViewer.hpp"
 #include "mui.hpp"
 
 class AppWindow : public Fl_Double_Window

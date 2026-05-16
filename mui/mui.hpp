@@ -2,7 +2,6 @@
 #include "Button.hpp"
 #include "Choice.hpp"
 #include "Dispatcher.hpp"
-#include "ImageViewer.hpp"
 #include "Layout.hpp"
 #include "MenuBar.hpp"
 #include "NativeFileChooser.hpp"
