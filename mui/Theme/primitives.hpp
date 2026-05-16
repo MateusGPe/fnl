@@ -206,38 +206,18 @@ namespace mui
                 fl_rectf(x, y, w, h);
                 return;
             }
-
-            if (w >= h)
+            const int half_h = h / 2;
+            for (int i = 0; i < half_h; ++i)
             {
-                const int half_h = h / 2;
-                for (int i = 0; i < half_h; ++i)
-                {
-                    float t = 1.0f - static_cast<float>(i) / static_cast<float>(half_h > 0 ? half_h : 1);
-                    fl_color(activated_color(fl_color_average(t_start, t_end, t), active));
-                    fl_xyline(x, y + i, x + w - 1);
-                }
-                for (int i = 0; i < h - half_h; ++i)
-                {
-                    float t = 1.0f - static_cast<float>(i) / static_cast<float>((h - half_h) > 0 ? (h - half_h) : 1);
-                    fl_color(activated_color(fl_color_average(b_start, b_end, t), active));
-                    fl_xyline(x, y + half_h + i, x + w - 1);
-                }
+                float t = 1.0f - static_cast<float>(i) / static_cast<float>(half_h > 0 ? half_h : 1);
+                fl_color(activated_color(fl_color_average(t_start, t_end, t), active));
+                fl_xyline(x, y + i, x + w - 1);
             }
-            else
+            for (int i = 0; i < h - half_h; ++i)
             {
-                const int half_w = w / 2;
-                for (int i = 0; i < half_w; ++i)
-                {
-                    float t = 1.0f - static_cast<float>(i) / static_cast<float>(half_w > 0 ? half_w : 1);
-                    fl_color(activated_color(fl_color_average(t_start, t_end, t), active));
-                    fl_yxline(x + i, y, y + h - 1);
-                }
-                for (int i = 0; i < w - half_w; ++i)
-                {
-                    float t = 1.0f - static_cast<float>(i) / static_cast<float>((w - half_w) > 0 ? (w - half_w) : 1);
-                    fl_color(activated_color(fl_color_average(b_start, b_end, t), active));
-                    fl_yxline(x + half_w + i, y, y + h - 1);
-                }
+                float t = 1.0f - static_cast<float>(i) / static_cast<float>((h - half_h) > 0 ? (h - half_h) : 1);
+                fl_color(activated_color(fl_color_average(b_start, b_end, t), active));
+                fl_xyline(x, y + half_h + i, x + w - 1);
             }
         }
 
@@ -349,15 +329,19 @@ namespace mui
                 {
                     double y_rel = i + 0.5;
                     int dx = static_cast<int>(std::round(radius - std::sqrt(2.0 * radius * y_rel - y_rel * y_rel)));
-                    if (corners & 1) dx_left = dx;
-                    if (corners & 2) dx_right = dx;
+                    if (corners & 1)
+                        dx_left = dx;
+                    if (corners & 2)
+                        dx_right = dx;
                 }
                 else if (i >= h - radius)
                 {
                     double y_rel = (h - 1 - i) + 0.5;
                     int dx = static_cast<int>(std::round(radius - std::sqrt(2.0 * radius * y_rel - y_rel * y_rel)));
-                    if (corners & 8) dx_left = dx;
-                    if (corners & 4) dx_right = dx;
+                    if (corners & 8)
+                        dx_left = dx;
+                    if (corners & 4)
+                        dx_right = dx;
                 }
                 fl_xyline(x + dx_left, y + i, x + w - 1 - dx_right);
             }

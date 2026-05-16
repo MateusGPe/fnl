@@ -3,13 +3,54 @@
 #include <FL/Fl_Spinner.H>
 #include <FL/Fl_Input.H>
 #include <FL/Fl_Repeat_Button.H>
+#include <FL/Fl_Valuator.H>
 #include <utility>
 
 namespace mui
 {
-    class Spinner : public policy::HoverTracker<policy::CallbackRouter<Fl_Spinner>>
+
+    template <typename T, typename... Args>
+    bool is_any_of(const T &valor, const Args &...opcoes)
     {
+        return ((valor == opcoes) || ...);
+    }
+
+    class Spinner : public policy::CallbackRouter<Fl_Spinner>
+    {
+    private:
+        Fl_Widget *m_hovered_button = nullptr;
+        bool is_hovered = false;
+
     protected:
+        int handle(int event) override
+        {
+            // Let HoverTracker do its thing first (sets is_hovered, redraws)
+            const int res = policy::CallbackRouter<Fl_Spinner>::handle(event);
+
+            if (is_any_of(event, FL_MOVE, FL_ENTER, FL_LEAVE, FL_FOCUS, FL_UNFOCUS))
+            {
+                Fl_Widget *over = nullptr;
+                if (event != FL_LEAVE)
+                {
+                    over = Fl::belowmouse();
+                    // Only care if we are over one of the buttons
+                    if (over != &up_button_ && over != &down_button_)
+                    {
+                        over = nullptr;
+                    }
+                }
+                if (over != m_hovered_button)
+                {
+                    m_hovered_button = over;
+                }
+                if (event == FL_LEAVE || event == FL_ENTER)
+                {
+                    is_hovered = event == FL_ENTER;
+                }
+                redraw();
+            }
+            return res;
+        }
         void draw() override
         {
             const auto &palette = ThemeManager::get_palette();
@@ -28,22 +69,19 @@ namespace mui
             draw_child(input_);
             fl_pop_clip();
 
-            const int btn_x = up_button_.x();
-            const int btn_y = up_button_.y();
-            const int btn_w = up_button_.w();
-            const int btn_h = up_button_.h() + down_button_.h();
+            engine::WidgetState up_state;
+            up_state.active = active_r();
+            up_state.hovered = (m_hovered_button == &up_button_);
+            up_state.focused = (Fl::focus() == &up_button_);
+            up_state.value = up_button_.value();
+            engine::draw_button_top_right(up_button_.x(), up_button_.y(), up_button_.w(), up_button_.h(), up_state, palette);
 
-            engine::WidgetState btn_state;
-            btn_state.active = active_r();
-            btn_state.hovered = is_hovered;
-            btn_state.focused = (Fl::focus() == &up_button_ || Fl::focus() == &down_button_);
-            btn_state.value = up_button_.value() || down_button_.value();
-
-            engine::draw_button_right(btn_x, btn_y, btn_w, btn_h, btn_state, palette);
-
-            fl_color(fl_color_average(palette.btn_frame.out_top, palette.input_bg, 0.5f));
-            fl_line(btn_x, up_button_.y() + up_button_.h(), btn_x + btn_w - 2, up_button_.y() + up_button_.h());
-            fl_line(btn_x, btn_y + 1, btn_x, btn_y + btn_h - 2);
+            engine::WidgetState down_state;
+            down_state.active = active_r();
+            down_state.hovered = (m_hovered_button == &down_button_);
+            down_state.focused = (Fl::focus() == &down_button_);
+            down_state.value = down_button_.value();
+            engine::draw_button_bottom_right(down_button_.x(), down_button_.y(), down_button_.w(), down_button_.h(), down_state, palette);
 
             draw_arrow(up_button_, true, palette);
             draw_arrow(down_button_, false, palette);
@@ -54,8 +92,8 @@ namespace mui
             {
                 fl_line_style(FL_SOLID, palette.metrics.focus_ring_width);
                 fl_color(c);
-                fl_line(btn_x, btn_y, btn_x, btn_y + btn_h);
-                fl_line(btn_x, btn_y + btn_h / 2, btn_x + btn_w, btn_y + btn_h / 2);
+                fl_line(up_button_.x(), up_button_.y(), up_button_.x(), down_button_.y() + down_button_.h());
+                fl_line(up_button_.x(), up_button_.y() + up_button_.h(), up_button_.x() + up_button_.w(), up_button_.y() + up_button_.h());
                 fl_line_style(0);
             }
         }
@@ -73,7 +111,7 @@ namespace mui
 
     public:
         Spinner(int x, int y, int w, int h, const char *label = nullptr)
-            : policy::HoverTracker<policy::CallbackRouter<Fl_Spinner>>(x, y, w, h, label)
+            : policy::CallbackRouter<Fl_Spinner>(x, y, w, h, label)
         {
             box(FL_NO_BOX);
             input_.box(FL_FLAT_BOX);

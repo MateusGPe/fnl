@@ -19,3 +19,4 @@
 #include "ValueSlider.hpp"
 #include "Widgets.hpp"
 #include "InputChoice.hpp"
+#include "ValueInput.hpp"

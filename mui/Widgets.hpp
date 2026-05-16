@@ -49,7 +49,7 @@ namespace mui
     using Output = RingHover<CallbackRouter<Fl_Output>>;
     using SecretInput = Blinkable<RingHover<CallbackRouter<Fl_Secret_Input>>>;
     using Input = Blinkable<RingHover<CallbackRouter<Fl_Input>>>;
-    using ValueInput = RingHover<CallbackRouter<Fl_Value_Input>>;
+    //using ValueInput = RingHover<CallbackRouter<Fl_Value_Input>>;
     using Roller = RingHover<CallbackRouter<Fl_Roller>>;
     using ValueOutput = RingHover<CallbackRouter<Fl_Value_Output>>;
     using Chart = RingHover<CallbackRouter<Fl_Chart>>;

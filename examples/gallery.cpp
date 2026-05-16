@@ -262,8 +262,8 @@ public:
         auto tab2 = [&] { // --- Tab 2: Valuators ---
             auto *vi = mui::build<mui::ValueInput>()
                            ->callback(on_generic_change, this)
-                           ->bounds(0, 1000)
-                           ->step(1)
+                           ->bounds(0, 100)
+                           ->step(0.1)
                            ->value(123)
                            ->end();
             auto *sp = mui::build<mui::Spinner>()
@@ -306,7 +306,7 @@ public:
 
             auto *tab2 = mui::make_vbox(
                 tx, ty, tw, th, 10,
-                mui::Fix(mui::make_hbox(10, mui::Fix(mui::make_label("ValueInput:"), 100), mui::Stretch(vi)), 30),
+                mui::Fix(mui::make_hbox(10, mui::Fix(mui::make_label("ValueInput:"), 100), mui::Stretch(vi)), 24),
                 mui::Fix(mui::make_hbox(10, mui::Fix(mui::make_label("Spinner:"), 100), mui::Stretch(sp)), 30),
                 mui::Fix(mui::make_hbox(10, mui::Fix(mui::make_label("Counter:"), 100), mui::Stretch(ct)), 30),
                 mui::Fix(mui::make_hbox(10, mui::Fix(mui::make_label("Adjuster:"), 100), mui::Stretch(adj)), 30),

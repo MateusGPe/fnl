@@ -71,6 +71,7 @@ namespace mui
         MBM(step)
         MBM(value)
         MBM(rate)
+        MBM(soft)
         // Common Container / Browser methods
         MBM(add)
         MBM(clear)

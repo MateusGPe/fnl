@@ -133,25 +133,54 @@ namespace mui
             draw_box(x, y, w, h, grad, palette.btn_frame, 2, state.active, palette);
         }
 
+        template <core::Rounding corners>
+        inline void draw_button_n(int x, int y, int w, int h,
+                                  const WidgetState &state, const ThemePalette &palette)
+        {
+            const auto &grad = detail::get_button_gradient(state, palette);
+            draw_box_corners(x, y, w, h, grad, palette.btn_frame, 2, state.active, palette, static_cast<int>(corners));
+        }
+
         inline void draw_button_left(int x, int y, int w, int h,
                                      const WidgetState &state, const ThemePalette &palette)
         {
-            const auto &grad = detail::get_button_gradient(state, palette);
-            draw_box_corners(x, y, w, h, grad, palette.btn_frame, 2, state.active, palette, static_cast<int>(core::Rounding::Left));
+            draw_button_n<core::Rounding::Left>(x, y, w, h, state, palette);
         }
 
         inline void draw_button_middle(int x, int y, int w, int h,
                                        const WidgetState &state, const ThemePalette &palette)
         {
-            const auto &grad = detail::get_button_gradient(state, palette);
-            draw_box_corners(x, y, w, h, grad, palette.btn_frame, 2, state.active, palette, static_cast<int>(core::Rounding::None));
+            draw_button_n<core::Rounding::None>(x, y, w, h, state, palette);
         }
 
         inline void draw_button_right(int x, int y, int w, int h,
                                       const WidgetState &state, const ThemePalette &palette)
         {
-            const auto &grad = detail::get_button_gradient(state, palette);
-            draw_box_corners(x, y, w, h, grad, palette.btn_frame, 2, state.active, palette, static_cast<int>(core::Rounding::Right));
+            draw_button_n<core::Rounding::Right>(x, y, w, h, state, palette);
+        }
+
+        inline void draw_button_top_left(int x, int y, int w, int h,
+                                         const WidgetState &state, const ThemePalette &palette)
+        {
+            draw_button_n<core::Rounding::TopLeft>(x, y, w, h, state, palette);
+        }
+
+        inline void draw_button_top_right(int x, int y, int w, int h,
+                                          const WidgetState &state, const ThemePalette &palette)
+        {
+            draw_button_n<core::Rounding::TopRight>(x, y, w, h, state, palette);
+        }
+
+        inline void draw_button_bottom_right(int x, int y, int w, int h,
+                                             const WidgetState &state, const ThemePalette &palette)
+        {
+            draw_button_n<core::Rounding::BottomRight>(x, y, w, h, state, palette);
+        }
+
+        inline void draw_button_bottom_left(int x, int y, int w, int h,
+                                            const WidgetState &state, const ThemePalette &palette)
+        {
+            draw_button_n<core::Rounding::BottomLeft>(x, y, w, h, state, palette);
         }
 
         inline void draw_choice(int x, int y, int w, int h,

@@ -296,8 +296,8 @@ namespace mui
                 Fl::set_boxtype(Theme::schemes::ROUNDED_HOVERED_UP_FRAME, engine::tpl_frame<&ThemePalette::hover_frame>, 2, 2, 4, 4);
                 Fl::set_boxtype(Theme::schemes::ROUNDED_DEPRESSED_DOWN_BOX, engine::tpl_box<&ThemePalette::down_grad, &ThemePalette::down_frame>, 2, 2, 4, 4);
                 Fl::set_boxtype(Theme::schemes::ROUNDED_DEPRESSED_DOWN_FRAME, engine::tpl_frame<&ThemePalette::down_frame>, 2, 2, 4, 4);
-                Fl::set_boxtype(Theme::schemes::ROUNDED_INPUT_THIN_DOWN_BOX, engine::tpl_input_box<&ThemePalette::input_frame>, 2, 3, 4, 6);
-                Fl::set_boxtype(Theme::schemes::ROUNDED_INPUT_THIN_DOWN_FRAME, engine::tpl_static_frame<&ThemePalette::input_frame>, 2, 3, 4, 6);
+                Fl::set_boxtype(Theme::schemes::ROUNDED_INPUT_THIN_DOWN_BOX, engine::tpl_input_box<&ThemePalette::input_frame>, 5, 3, 10, 6);
+                Fl::set_boxtype(Theme::schemes::ROUNDED_INPUT_THIN_DOWN_FRAME, engine::tpl_static_frame<&ThemePalette::input_frame>, 5, 3, 10, 6);
                 Fl::set_boxtype(Theme::schemes::ROUNDED_PANEL_THIN_UP_BOX, engine::tpl_flat_box<&ThemePalette::thin_up_frame>, 1, 1, 2, 2);
                 Fl::set_boxtype(Theme::schemes::ROUNDED_PANEL_THIN_UP_FRAME, engine::tpl_static_frame<&ThemePalette::thin_up_frame>, 1, 1, 2, 2);
                 Fl::set_boxtype(Theme::schemes::BUTTON_DOWN_BOX, engine::tpl_box<&ThemePalette::down_grad, &ThemePalette::down_frame>, 2, 2, 4, 4);
