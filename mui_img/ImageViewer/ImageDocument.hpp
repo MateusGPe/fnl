@@ -12,9 +12,8 @@ namespace mui
     class ImageDocument
     {
     private:
+        int next_layer_id_ = 0;
         std::vector<std::shared_ptr<Layer>> layers_;
-        std::vector<std::shared_ptr<ViewerCommand>> undo_stack_;
-        std::vector<std::shared_ptr<ViewerCommand>> redo_stack_;
         int selected_layer_index_ = -1;
         DocumentMode mode_ = DocumentMode::InfiniteCanvas;
         int canvas_width_ = 800;
@@ -32,6 +31,8 @@ namespace mui
 
         void add_layer(std::shared_ptr<Layer> layer)
         {
+            if (layer->id == -1)
+                layer->id = next_layer_id_++;
             layers_.push_back(layer);
         }
 
@@ -45,8 +46,6 @@ namespace mui
         void swap_layers(int i, int j) { std::swap(layers_[i], layers_[j]); }
         std::shared_ptr<Layer> get_layer(int index) const { return layers_[index]; }
         size_t layer_count() const { return layers_.size(); }
-
-        void undo() {}
 
         const std::vector<std::shared_ptr<Layer>> &layers() const { return layers_; }
     };

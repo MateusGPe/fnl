@@ -33,10 +33,8 @@ FetchContent_MakeAvailable(fltk)
 
 # --- Define the MUI header-only library ---
 add_library(mui INTERFACE)
-target_include_directories(mui INTERFACE
-  ${CMAKE_CURRENT_SOURCE_DIR}/mui
-  ${CMAKE_CURRENT_SOURCE_DIR}
-)
+target_include_directories(mui INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/mui
+                                         ${CMAKE_CURRENT_SOURCE_DIR})
 
 # --- Build all examples ---
 file(GLOB EXAMPLE_SOURCES "examples/*.cpp")
@@ -46,8 +44,15 @@ foreach(EXAMPLE_SOURCE ${EXAMPLE_SOURCES})
   add_executable(${EXAMPLE_NAME} ${EXAMPLE_SOURCE})
 
   # Add the FLTK source and binary directories to the include path.
-  target_include_directories(${EXAMPLE_NAME} PRIVATE ${fltk_SOURCE_DIR} ${fltk_BINARY_DIR})
+  target_include_directories(${EXAMPLE_NAME} PRIVATE ${fltk_SOURCE_DIR}
+                                                     ${fltk_BINARY_DIR})
 
   # Link against mui (for includes) and fltk libraries
   target_link_libraries(${EXAMPLE_NAME} PRIVATE mui fltk fltk_images)
 endforeach()
+
+# --- Build the ImageViewer test ---
+add_executable(imageviewer_tester examples/imageviewer_test.cpp)
+target_include_directories(imageviewer_tester PRIVATE ${fltk_SOURCE_DIR}
+                                                    ${fltk_BINARY_DIR})
+target_link_libraries(imageviewer_tester PRIVATE mui fltk fltk_images)

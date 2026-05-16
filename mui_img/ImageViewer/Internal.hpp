@@ -30,6 +30,11 @@ namespace mui
         friend struct CommandFlip;
         friend struct CommandRotate;
         friend struct CommandDelete;
+        friend struct CommandOpacity;
+        friend struct CommandBlendMode;
+        friend struct CommandVisibility;
+        friend struct CommandLock;
+        friend struct CommandParent;
 
     protected:
         std::vector<std::shared_ptr<ViewerCommand>> undo_stack_;
@@ -114,33 +119,25 @@ namespace mui
             bg_dirty_ = true;
             redraw();
         }
+
+    public:
+        std::shared_ptr<ImageLayer> get_image_layer(int index) const
+        {
+            if (index < 0 || index >= (int)document_->layer_count())
+                return nullptr;
+            return std::static_pointer_cast<ImageLayer>(document_->get_layer(index));
+        }
+
         void world_to_layer_local(const ImageLayer &l, double wx, double wy, double &out_lx, double &out_ly)
         {
-            Rect2D b = l.get_effective_bounds();
-            if (l.rotation_angle == 0.0 && !l.flip_h && !l.flip_v)
-            {
-                out_lx = wx;
-                out_ly = wy;
-                return;
-            }
-            Point2D c = l.get_center();
-            Point2D local_pt = Transform::world_to_local(wx, wy, c.x, c.y, l.rotation_angle, l.flip_h, l.flip_v);
+            const Point2D c = l.get_center();
+            const Point2D local_pt = Transform::world_to_local(wx, wy, c.x, c.y, l.rotation_angle, l.flip_h, l.flip_v);
             out_lx = local_pt.x;
             out_ly = local_pt.y;
         }
 
-        void push_command(std::shared_ptr<ViewerCommand> cmd)
-        {
-            cmd->execute(this);
-            undo_stack_.push_back(cmd);
-            redo_stack_.clear();
-            notify_view_changed();
-        }
-
         void undo()
         {
-            if (document_)
-                document_->undo();
             if (undo_stack_.empty())
                 return;
             auto cmd = undo_stack_.back();
@@ -161,31 +158,47 @@ namespace mui
             notify_view_changed();
         }
 
+        // Made public to facilitate external command injection, especially for testing.
+        void push_command(std::shared_ptr<ViewerCommand> cmd)
+        {
+            cmd->execute(this);
+            undo_stack_.push_back(cmd);
+            redo_stack_.clear();
+            notify_view_changed();
+        }
+
         bool is_layer_visible(int index) const
         {
             if (index < 0 || index >= (int)document_->layer_count())
                 return false;
 
+            std::vector<int> visited_indices;
             int curr = index;
-            while (curr >= 0 && curr < (int)document_->layer_count())
+            while (curr != -1)
             {
-                auto l = std::static_pointer_cast<ImageLayer>(document_->get_layer(curr));
-                if (!l->visible)
+                // The parent lookup is an O(N) scan. For deep hierarchies, this can be slow.
+                // A map from layer ID to index would improve this to O(1).
+                if (std::find(visited_indices.begin(), visited_indices.end(), curr) != visited_indices.end())
+                    return false; // Cycle detected in parent hierarchy.
+                visited_indices.push_back(curr);
+
+                auto l = get_image_layer(curr);
+                if (!l || !l->visible)
                     return false;
+
                 int pid = l->parent_id;
                 if (pid == -1)
-                    break;
+                    break; // Reached root of this branch.
 
                 int parent_idx = -1;
                 for (int i = 0; i < (int)document_->layer_count(); ++i)
+                {
                     if (document_->get_layer(i)->id == pid)
                     {
                         parent_idx = i;
                         break;
                     }
-
-                if (parent_idx == curr || parent_idx == -1)
-                    break;
+                }
                 curr = parent_idx;
             }
             return true;

@@ -124,24 +124,22 @@ namespace mui
         {
             if (index >= 0 && index < (int)document_->layer_count())
             {
-                auto l = std::static_pointer_cast<ImageLayer>(document_->get_layer(index));
-                l->visible = !l->visible;
-                invalidate();
+                if (auto l = get_image_layer(index))
+                {
+                    push_command(std::make_shared<CommandVisibility>(index, l->visible, !l->visible));
+                }
             }
             return *this;
         }
 
         ImageViewer &toggle_layer_lock(int index)
         {
-            if (index >= 0 && index < (int)document_->layer_count())
+            if (auto l = get_image_layer(index))
             {
-                auto l = std::static_pointer_cast<ImageLayer>(document_->get_layer(index));
-                l->locked = !l->locked;
-                invalidate();
+                push_command(std::make_shared<CommandLock>(index, l->locked, !l->locked));
             }
             return *this;
         }
-
         ImageViewer &move_layer_up(int index)
         {
             if (index >= 0 && index < (int)document_->layer_count() - 1)
@@ -155,7 +153,6 @@ namespace mui
             }
             return *this;
         }
-
         ImageViewer &move_layer_down(int index)
         {
             if (index > 0 && index < (int)document_->layer_count())
@@ -182,31 +179,26 @@ namespace mui
         }
         ImageViewer &flip_layer_horizontal(int index)
         {
-            if (index >= 0 && index < (int)document_->layer_count())
+            if (auto l = get_image_layer(index))
             {
-                auto l = std::static_pointer_cast<ImageLayer>(document_->get_layer(index));
                 auto cmd = std::make_shared<CommandFlip>(index, l->flip_h, l->flip_v, !l->flip_h, l->flip_v);
                 push_command(cmd);
             }
             return *this;
         }
-
         ImageViewer &flip_layer_vertical(int index)
         {
-            if (index >= 0 && index < (int)document_->layer_count())
+            if (auto l = get_image_layer(index))
             {
-                auto l = std::static_pointer_cast<ImageLayer>(document_->get_layer(index));
                 auto cmd = std::make_shared<CommandFlip>(index, l->flip_h, l->flip_v, l->flip_h, !l->flip_v);
                 push_command(cmd);
             }
             return *this;
         }
-
         ImageViewer &rotate_layer(int index, double angle)
         {
-            if (index >= 0 && index < (int)document_->layer_count())
+            if (auto l = get_image_layer(index))
             {
-                auto l = std::static_pointer_cast<ImageLayer>(document_->get_layer(index));
                 auto cmd = std::make_shared<CommandRotate>(index, l->rotation_angle, angle);
                 push_command(cmd);
             }
@@ -214,22 +206,48 @@ namespace mui
         }
         ImageViewer &layer_opacity(int index, double alpha)
         {
-            if (index >= 0 && index < (int)document_->layer_count())
+            if (auto l = get_image_layer(index))
             {
-                auto l = std::static_pointer_cast<ImageLayer>(document_->get_layer(index));
-                l->alpha = std::clamp(alpha, 0.0, 1.0);
-                invalidate();
+                push_command(std::make_shared<CommandOpacity>(index, l->alpha, std::clamp(alpha, 0.0, 1.0)));
+            }
+            return *this;
+        }
+        ImageViewer &layer_blend_mode(int index, BlendMode mode)
+        {
+            if (auto l = get_image_layer(index))
+            {
+                push_command(std::make_shared<CommandBlendMode>(index, l->blend_mode, mode));
             }
             return *this;
         }
 
-        ImageViewer &layer_blend_mode(int index, BlendMode mode)
+        ImageViewer &crop_layer(int index, double crop_x, double crop_y, double crop_w, double crop_h)
         {
-            if (index >= 0 && index < (int)document_->layer_count())
+            if (auto l = get_image_layer(index))
             {
-                auto l = std::static_pointer_cast<ImageLayer>(document_->get_layer(index));
-                l->blend_mode = mode;
-                invalidate();
+                if (!l->image || !l->image->handle())
+                    return *this;
+
+                const int img_w = l->image->data_w();
+                const int img_h = l->image->data_h();
+
+                double nx = std::clamp(crop_x, 0.0, (double)img_w);
+                double ny = std::clamp(crop_y, 0.0, (double)img_h);
+                double nw = std::clamp(crop_w, 0.0, (double)img_w - nx);
+                double nh = std::clamp(crop_h, 0.0, (double)img_h - ny);
+
+                if (nw < 1.0 || nh < 1.0)
+                    return *this;
+
+                double ox = (l->crop_w >= 0) ? l->crop_x : 0.0;
+                double oy = (l->crop_h >= 0) ? l->crop_y : 0.0;
+
+                double dx = (ox - nx) * l->scale_x;
+                double dy = (oy - ny) * l->scale_y;
+
+                Point2D world_offset = Transform::local_to_world(dx, dy, 0, 0, l->rotation_angle, l->flip_h, l->flip_v);
+                auto cmd = std::make_shared<CommandCrop>(index, l->crop_x, l->crop_y, l->crop_w, l->crop_h, nx, ny, nw, nh, l->x, l->y, l->x + world_offset.x, l->y + world_offset.y);
+                push_command(cmd);
             }
             return *this;
         }
@@ -245,8 +263,7 @@ namespace mui
         {
             if (index >= 0 && index < (int)document_->layer_count())
             {
-                document_->get_layer(index)->parent_id = parent_id;
-                invalidate();
+                push_command(std::make_shared<CommandParent>(index, document_->get_layer(index)->parent_id, parent_id));
             }
             return *this;
         }
@@ -320,14 +337,15 @@ namespace mui
                     double min_x = 1e99, min_y = 1e99, max_x = -1e99, max_y = -1e99;
                     for (size_t i = 0; i < document_->layer_count(); ++i)
                     {
-                        auto layer = std::static_pointer_cast<ImageLayer>(document_->get_layer(i));
-                        Rect2D b = layer->get_effective_bounds();
-                        Rect2D rot_b = Transform::get_rotated_bounds(b.x, b.y, b.w, b.h, layer->rotation_angle);
-
-                        min_x = std::min(min_x, rot_b.x);
-                        max_x = std::max(max_x, rot_b.x + rot_b.w);
-                        min_y = std::min(min_y, rot_b.y);
-                        max_y = std::max(max_y, rot_b.y + rot_b.h);
+                        if (auto layer = get_image_layer(i))
+                        {
+                            Rect2D b = layer->get_effective_bounds();
+                            Rect2D rot_b = Transform::get_rotated_bounds(b.x, b.y, b.w, b.h, layer->rotation_angle);
+                            min_x = std::min(min_x, rot_b.x);
+                            max_x = std::max(max_x, rot_b.x + rot_b.w);
+                            min_y = std::min(min_y, rot_b.y);
+                            max_y = std::max(max_y, rot_b.y + rot_b.h);
+                        }
                     }
 
                     if (min_x < max_x && min_y < max_y)
@@ -345,11 +363,13 @@ namespace mui
                             scale_factor = 1.0;
                         for (size_t i = 0; i < document_->layer_count(); ++i)
                         {
-                            auto layer = std::static_pointer_cast<ImageLayer>(document_->get_layer(i));
-                            layer->x = target_cx + (layer->x - current_cx) * scale_factor;
-                            layer->y = target_cy + (layer->y - current_cy) * scale_factor;
-                            layer->scale_x *= scale_factor;
-                            layer->scale_y *= scale_factor;
+                            if (auto layer = get_image_layer(i))
+                            {
+                                layer->x = target_cx + (layer->x - current_cx) * scale_factor;
+                                layer->y = target_cy + (layer->y - current_cy) * scale_factor;
+                                layer->scale_x *= scale_factor;
+                                layer->scale_y *= scale_factor;
+                            }
                         }
                     }
                 }
@@ -399,15 +419,17 @@ namespace mui
 
             for (size_t i = 0; i < document_->layer_count(); ++i)
             {
-                auto layer = std::static_pointer_cast<ImageLayer>(document_->get_layer(i));
-                Rect2D b = layer->get_effective_bounds();
-                Rect2D rot_b = Transform::get_rotated_bounds(b.x, b.y, b.w, b.h, layer->rotation_angle);
+                if (auto layer = get_image_layer(i))
+                {
+                    Rect2D b = layer->get_effective_bounds();
+                    Rect2D rot_b = Transform::get_rotated_bounds(b.x, b.y, b.w, b.h, layer->rotation_angle);
 
-                double layer_cx = rot_b.x + (rot_b.w * 0.5);
-                double layer_cy = rot_b.y + (rot_b.h * 0.5);
+                    double layer_cx = rot_b.x + (rot_b.w * 0.5);
+                    double layer_cy = rot_b.y + (rot_b.h * 0.5);
 
-                layer->x += (target_cx - layer_cx);
-                layer->y += (target_cy - layer_cy);
+                    layer->x += (target_cx - layer_cx);
+                    layer->y += (target_cy - layer_cy);
+                }
             }
 
             view_x_ = target_cx - (w() / scale_ * 0.5);
@@ -466,9 +488,11 @@ namespace mui
             ss << "[\n";
             for (size_t i = 0; i < document_->layer_count(); ++i)
             {
-                auto l = std::static_pointer_cast<ImageLayer>(document_->get_layer(i));
-                ss << "  {\"name\":\"" << l->name << "\", \"x\":" << l->x << ", \"y\":" << l->y
-                   << ", \"sx\":" << l->scale_x << ", \"sy\":" << l->scale_y << "}";
+                if (auto l = get_image_layer(i))
+                {
+                    ss << "  {\"name\":\"" << l->name << "\", \"x\":" << l->x << ", \"y\":" << l->y
+                       << ", \"sx\":" << l->scale_x << ", \"sy\":" << l->scale_y << "}";
+                }
                 if (i < document_->layer_count() - 1)
                     ss << ",";
                 ss << "\n";

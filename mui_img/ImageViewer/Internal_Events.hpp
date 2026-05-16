@@ -9,9 +9,8 @@ namespace mui
 {
     inline InternalImageViewer::DragMode InternalImageViewer::hit_test_gizmo(int mx, int my)
     {
-        if (selected_layer_index_ >= 0 && selected_layer_index_ < (int)document_->layer_count())
+        if (auto l_ptr = get_image_layer(selected_layer_index_))
         {
-            auto l_ptr = std::static_pointer_cast<ImageLayer>(document_->get_layer(selected_layer_index_));
             if (l_ptr->locked)
                 return None;
             const auto &l = *l_ptr;
@@ -75,28 +74,31 @@ namespace mui
     {
         for (int i = (int)document_->layer_count() - 1; i >= 0; --i)
         {
-            const auto &l = *std::static_pointer_cast<ImageLayer>(document_->get_layer(i));
-            if (!is_layer_visible(i))
-                continue;
-
-            double lx = l.x;
-            double ly = l.y;
-            double lw = l.original_w * l.scale_x;
-            double lh = l.original_h * l.scale_y;
-            if (l.crop_w >= 0 && l.crop_h >= 0)
+            if (auto l_ptr = get_image_layer(i))
             {
-                lx += l.crop_x * l.scale_x;
-                ly += l.crop_y * l.scale_y;
-                lw = l.crop_w * l.scale_x;
-                lh = l.crop_h * l.scale_y;
-            }
+                const auto &l = *l_ptr;
+                if (!is_layer_visible(i))
+                    continue;
 
-            double local_wx, local_wy;
-            world_to_layer_local(l, world_x, world_y, local_wx, local_wy);
+                double lx = l.x;
+                double ly = l.y;
+                double lw = l.original_w * l.scale_x;
+                double lh = l.original_h * l.scale_y;
+                if (l.crop_w >= 0 && l.crop_h >= 0)
+                {
+                    lx += l.crop_x * l.scale_x;
+                    ly += l.crop_y * l.scale_y;
+                    lw = l.crop_w * l.scale_x;
+                    lh = l.crop_h * l.scale_y;
+                }
 
-            if (local_wx >= lx && local_wx <= lx + lw && local_wy >= ly && local_wy <= ly + lh)
-            {
-                return i;
+                double local_wx, local_wy;
+                world_to_layer_local(l, world_x, world_y, local_wx, local_wy);
+
+                if (local_wx >= lx && local_wx <= lx + lw && local_wy >= ly && local_wy <= ly + lh)
+                {
+                    return i;
+                }
             }
         }
         return -1;
@@ -104,9 +106,8 @@ namespace mui
 
     inline void InternalImageViewer::sample_color(int mx, int my, double world_x, double world_y)
     {
-        if (selected_layer_index_ >= 0 && selected_layer_index_ < (int)document_->layer_count())
+        if (auto l = get_image_layer(selected_layer_index_))
         {
-            auto l = std::static_pointer_cast<ImageLayer>(document_->get_layer(selected_layer_index_));
             if (l->image && l->image->handle() && l->visible)
             {
                 double local_wx, local_wy;
@@ -157,17 +158,18 @@ namespace mui
         {
             double world_x = view_x_ + (Fl::event_x() - x()) / scale_;
             double world_y = view_y_ + (Fl::event_y() - y()) / scale_;
+            ViewerMouseEvent e = {this, Fl::event_x(), Fl::event_y(), world_x, world_y};
             int res = 0;
             switch (event)
             {
             case FL_PUSH:
-                res = active_tool_state_->on_mouse_down(this, Fl::event_x(), Fl::event_y(), world_x, world_y);
+                res = active_tool_state_->on_mouse_down(e);
                 break;
             case FL_DRAG:
-                res = active_tool_state_->on_mouse_drag(this, Fl::event_x(), Fl::event_y(), world_x, world_y, Fl::event_dx(), Fl::event_dy());
+                res = active_tool_state_->on_mouse_drag(e, Fl::event_dx(), Fl::event_dy());
                 break;
             case FL_RELEASE:
-                res = active_tool_state_->on_mouse_up(this, Fl::event_x(), Fl::event_y(), world_x, world_y);
+                res = active_tool_state_->on_mouse_up(e);
                 break;
             case FL_KEYBOARD:
                 res = active_tool_state_->on_key_press(this, Fl::event_key());
@@ -184,42 +186,30 @@ namespace mui
         {
         case FL_KEYBOARD:
         {
-            if (selected_layer_index_ >= 0 && selected_layer_index_ < (int)document_->layer_count() && !document_->get_layer(selected_layer_index_)->locked)
+            if (auto l = get_image_layer(selected_layer_index_))
             {
-                auto l = std::static_pointer_cast<ImageLayer>(document_->get_layer(selected_layer_index_));
+                if (l->locked)
+                    break;
+
                 if (Fl::event_key() == FL_Delete || Fl::event_key() == FL_BackSpace)
                 {
-                    auto cmd = std::make_shared<CommandDelete>(selected_layer_index_, document_->get_layer(selected_layer_index_));
+                    auto cmd = std::make_shared<CommandDelete>(selected_layer_index_, l);
                     push_command(cmd);
                     return 1;
                 }
+
                 double nudge = Fl::event_state(FL_SHIFT) ? 10.0 : 1.0;
-                if (Fl::event_key() == FL_Left)
+                double dx = 0.0, dy = 0.0;
+                switch (Fl::event_key())
                 {
-                    l->x -= nudge / scale_;
-                    bg_dirty_ = true;
-                    redraw();
-                    return 1;
+                case FL_Left: dx = -nudge / scale_; break;
+                case FL_Right: dx = nudge / scale_; break;
+                case FL_Up: dy = -nudge / scale_; break;
+                case FL_Down: dy = nudge / scale_; break;
                 }
-                if (Fl::event_key() == FL_Right)
+                if (dx != 0.0 || dy != 0.0)
                 {
-                    l->x += nudge / scale_;
-                    bg_dirty_ = true;
-                    redraw();
-                    return 1;
-                }
-                if (Fl::event_key() == FL_Up)
-                {
-                    l->y -= nudge / scale_;
-                    bg_dirty_ = true;
-                    redraw();
-                    return 1;
-                }
-                if (Fl::event_key() == FL_Down)
-                {
-                    l->y += nudge / scale_;
-                    bg_dirty_ = true;
-                    redraw();
+                    push_command(std::make_shared<CommandMove>(selected_layer_index_, l->x, l->y, l->x + dx, l->y + dy));
                     return 1;
                 }
             }
@@ -257,19 +247,21 @@ namespace mui
                     pan_minimap_to(last_mouse_x_, last_mouse_y_);
                     return 1;
                 }
-                if ((active_tool_ == ViewerTool::Select || active_tool_ == ViewerTool::Move) &&
-                    selected_layer_index_ >= 0 && selected_layer_index_ < (int)document_->layer_count() && !document_->get_layer(selected_layer_index_)->locked)
+                if (active_tool_ == ViewerTool::Select || active_tool_ == ViewerTool::Move)
                 {
-                    DragMode mode = hit_test_gizmo(last_mouse_x_, last_mouse_y_);
-                    if (mode == ScaleTL || mode == ScaleTR || mode == ScaleBL || mode == ScaleBR)
+                    if (auto l = get_image_layer(selected_layer_index_))
                     {
-                        drag_mode_ = mode;
-                        auto l = std::static_pointer_cast<ImageLayer>(document_->get_layer(selected_layer_index_));
-                        orig_layer_sx_ = l->scale_x;
-                        orig_layer_sy_ = l->scale_y;
-                        orig_layer_x_ = l->x;
-                        orig_layer_y_ = l->y;
-                        return 1;
+                        if (l->locked) break;
+                        DragMode mode = hit_test_gizmo(last_mouse_x_, last_mouse_y_);
+                        if (mode == ScaleTL || mode == ScaleTR || mode == ScaleBL || mode == ScaleBR)
+                        {
+                            drag_mode_ = mode;
+                            orig_layer_sx_ = l->scale_x;
+                            orig_layer_sy_ = l->scale_y;
+                            orig_layer_x_ = l->x;
+                            orig_layer_y_ = l->y;
+                            return 1;
+                        }
                     }
                 }
 
@@ -279,9 +271,9 @@ namespace mui
                 }
                 else if (active_tool_ == ViewerTool::Crop)
                 {
-                    if (selected_layer_index_ >= 0 && selected_layer_index_ < (int)document_->layer_count())
+                    if (auto l_ptr = get_image_layer(selected_layer_index_))
                     {
-                        const auto &l = *std::static_pointer_cast<ImageLayer>(document_->get_layer(selected_layer_index_));
+                        const auto &l = *l_ptr;
                         double local_wx, local_wy;
                         world_to_layer_local(l, world_x, world_y, local_wx, local_wy);
 
@@ -306,12 +298,13 @@ namespace mui
                         notify_layer_selected();
                         redraw();
                     }
-                    if (selected_layer_index_ != -1 && selected_layer_index_ < (int)document_->layer_count() && !document_->get_layer(selected_layer_index_)->locked)
+                    if (auto l = get_image_layer(selected_layer_index_))
                     {
-                        drag_mode_ = MoveLayer;
-                        auto l = std::static_pointer_cast<ImageLayer>(document_->get_layer(selected_layer_index_));
-                        orig_layer_x_ = l->x;
-                        orig_layer_y_ = l->y;
+                        if (!l->locked) {
+                            drag_mode_ = MoveLayer;
+                            orig_layer_x_ = l->x;
+                            orig_layer_y_ = l->y;
+                        }
                     }
                 }
                 else
@@ -325,12 +318,13 @@ namespace mui
                         redraw();
                     }
 
-                    if (selected_layer_index_ != -1 && selected_layer_index_ < (int)document_->layer_count() && !document_->get_layer(selected_layer_index_)->locked)
+                    if (auto l = get_image_layer(selected_layer_index_))
                     {
-                        drag_mode_ = MoveLayer;
-                        auto l = std::static_pointer_cast<ImageLayer>(document_->get_layer(selected_layer_index_));
-                        orig_layer_x_ = l->x;
-                        orig_layer_y_ = l->y;
+                        if (!l->locked) {
+                            drag_mode_ = MoveLayer;
+                            orig_layer_x_ = l->x;
+                            orig_layer_y_ = l->y;
+                        }
                     }
                     else
                     {
@@ -359,31 +353,34 @@ namespace mui
                 pan_minimap_to(Fl::event_x(), Fl::event_y());
                 return 1;
             }
-            else if (drag_mode_ == MoveLayer && selected_layer_index_ >= 0 && selected_layer_index_ < (int)document_->layer_count())
+            else if (drag_mode_ == MoveLayer)
             {
-                double target_x = orig_layer_x_ + (world_x - drag_start_x_);
-                double target_y = orig_layer_y_ + (world_y - drag_start_y_);
-                const double SNAP_THRESHOLD = 10.0 / scale_;
-                for (size_t i = 0; i < document_->layer_count(); ++i)
+                if (auto l = get_image_layer(selected_layer_index_))
                 {
-                    if ((int)i == selected_layer_index_)
-                        continue;
-                    auto other_l = std::static_pointer_cast<ImageLayer>(document_->get_layer(i));
-                    if (std::abs(target_x - other_l->x) < SNAP_THRESHOLD)
-                        target_x = other_l->x;
-                    if (std::abs(target_y - other_l->y) < SNAP_THRESHOLD)
-                        target_y = other_l->y;
+                    double target_x = orig_layer_x_ + (world_x - drag_start_x_);
+                    double target_y = orig_layer_y_ + (world_y - drag_start_y_);
+                    const double SNAP_THRESHOLD = 10.0 / scale_;
+                    for (size_t i = 0; i < document_->layer_count(); ++i)
+                    {
+                        if ((int)i == selected_layer_index_)
+                            continue;
+                        if (auto other_l = get_image_layer(i))
+                        {
+                            if (std::abs(target_x - other_l->x) < SNAP_THRESHOLD)
+                                target_x = other_l->x;
+                            if (std::abs(target_y - other_l->y) < SNAP_THRESHOLD)
+                                target_y = other_l->y;
+                        }
+                    }
+                    l->x = target_x;
+                    l->y = target_y;
+                    bg_dirty_ = true;
+                    clamp_view();
                 }
-
-                auto l = std::static_pointer_cast<ImageLayer>(document_->get_layer(selected_layer_index_));
-                l->x = target_x;
-                l->y = target_y;
-                bg_dirty_ = true;
-                clamp_view();
             }
             else if (drag_mode_ == Crop)
             {
-                const auto &l = *std::static_pointer_cast<ImageLayer>(document_->get_layer(selected_layer_index_));
+                const auto &l = *get_image_layer(selected_layer_index_);
                 double local_wx, local_wy;
                 world_to_layer_local(l, world_x, world_y, local_wx, local_wy);
 
@@ -398,9 +395,9 @@ namespace mui
                 return 1;
             }
             else if ((drag_mode_ == ScaleBR || drag_mode_ == ScaleTL || drag_mode_ == ScaleTR || drag_mode_ == ScaleBL) &&
-                     selected_layer_index_ >= 0 && selected_layer_index_ < (int)document_->layer_count())
+                     get_image_layer(selected_layer_index_))
             {
-                auto &l = *std::static_pointer_cast<ImageLayer>(document_->get_layer(selected_layer_index_));
+                auto &l = *get_image_layer(selected_layer_index_);
                 Rect2D b = l.get_effective_bounds();
                 double orig_draw_w = b.w * orig_layer_sx_ / l.scale_x;
                 double orig_draw_h = b.h * orig_layer_sy_ / l.scale_y;
@@ -446,16 +443,19 @@ namespace mui
         }
         case FL_RELEASE:
         {
-            if (drag_mode_ == MoveLayer && selected_layer_index_ >= 0 && selected_layer_index_ < (int)document_->layer_count())
+            if (drag_mode_ == MoveLayer)
             {
-                auto l = std::static_pointer_cast<ImageLayer>(document_->get_layer(selected_layer_index_));
-                auto cmd = std::make_shared<CommandMove>(selected_layer_index_, orig_layer_x_, orig_layer_y_, l->x, l->y);
-                undo_stack_.push_back(cmd);
-                redo_stack_.clear();
+                if (auto l = get_image_layer(selected_layer_index_))
+                {
+                    if (l->x != orig_layer_x_ || l->y != orig_layer_y_)
+                    {
+                        push_command(std::make_shared<CommandMove>(selected_layer_index_, orig_layer_x_, orig_layer_y_, l->x, l->y));
+                    }
+                }
             }
-            else if (drag_mode_ == Crop && selected_layer_index_ >= 0 && selected_layer_index_ < (int)document_->layer_count())
+            else if (drag_mode_ == Crop)
             {
-                auto &l = *std::static_pointer_cast<ImageLayer>(document_->get_layer(selected_layer_index_));
+                auto &l = *get_image_layer(selected_layer_index_);
                 if (l.image && l.image->handle())
                 {
                     const int img_w = l.image->data_w();

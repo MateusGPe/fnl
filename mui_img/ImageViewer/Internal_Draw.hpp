@@ -64,9 +64,9 @@ namespace mui
 
     inline void InternalImageViewer::draw_overlays(int cx, int cy, int cw, int ch)
     {
-        if (selected_layer_index_ >= 0 && selected_layer_index_ < (int)document_->layer_count())
+        if (auto l_ptr = get_image_layer(selected_layer_index_))
         {
-            const auto &l = *std::static_pointer_cast<ImageLayer>(document_->get_layer(selected_layer_index_));
+            const auto &l = *l_ptr;
             if (!is_layer_visible(selected_layer_index_))
                 return;
 
@@ -138,9 +138,11 @@ namespace mui
 
         if (drag_mode_ == Crop && selected_layer_index_ >= 0 && selected_layer_index_ < (int)document_->layer_count())
         {
-            auto &l = *std::static_pointer_cast<ImageLayer>(document_->get_layer(selected_layer_index_));
+            if (auto l_ptr = get_image_layer(selected_layer_index_))
+            {
+                auto &l = *l_ptr;
 
-            double lx = l.x;
+                double lx = l.x;
             double ly = l.y;
             double lw = l.original_w * l.scale_x;
             double lh = l.original_h * l.scale_y;
@@ -173,6 +175,7 @@ namespace mui
                 fl_vertex(screen_x, screen_y);
             }
             fl_end_loop();
+            }
             fl_line_style(0);
         }
     }
@@ -194,21 +197,24 @@ namespace mui
         {
             if (!is_layer_visible(i))
                 continue;
-            const auto &layer = *std::static_pointer_cast<ImageLayer>(document_->get_layer(i));
-
-            Rect2D b = layer.get_effective_bounds();
-            double rot_cx = b.x + b.w * 0.5, rot_cy = b.y + b.h * 0.5;
-            double hw = b.w * 0.5, hh = b.h * 0.5;
-
-            fl_color(ThemeManager::get_palette().inactive);
-            fl_begin_polygon();
-            Point2D pts[4] = {{-hw, -hh}, {hw, -hh}, {hw, hh}, {-hw, hh}};
-            for (int j = 0; j < 4; ++j)
+            if (auto layer_ptr = get_image_layer(i))
             {
-                Point2D w_pt = Transform::local_to_world(rot_cx + pts[j].x, rot_cy + pts[j].y, rot_cx, rot_cy, layer.rotation_angle, layer.flip_h, layer.flip_v);
-                fl_vertex(mi.offset_x + (w_pt.x - mi.min_x) * mi.scale, mi.offset_y + (w_pt.y - mi.min_y) * mi.scale);
+                const auto &layer = *layer_ptr;
+
+                Rect2D b = layer.get_effective_bounds();
+                double rot_cx = b.x + b.w * 0.5, rot_cy = b.y + b.h * 0.5;
+                double hw = b.w * 0.5, hh = b.h * 0.5;
+
+                fl_color(ThemeManager::get_palette().inactive);
+                fl_begin_polygon();
+                Point2D pts[4] = {{-hw, -hh}, {hw, -hh}, {hw, hh}, {-hw, hh}};
+                for (int j = 0; j < 4; ++j)
+                {
+                    Point2D w_pt = Transform::local_to_world(rot_cx + pts[j].x, rot_cy + pts[j].y, rot_cx, rot_cy, layer.rotation_angle, layer.flip_h, layer.flip_v);
+                    fl_vertex(mi.offset_x + (w_pt.x - mi.min_x) * mi.scale, mi.offset_y + (w_pt.y - mi.min_y) * mi.scale);
+                }
+                fl_end_polygon();
             }
-            fl_end_polygon();
         }
 
         int vx = static_cast<int>(mi.offset_x + (view_x_ - mi.min_x) * mi.scale);
@@ -469,7 +475,8 @@ namespace mui
 
             for (size_t i = 0; i < document_->layer_count(); ++i)
             {
-                render_layer_to_buffer(*std::static_pointer_cast<ImageLayer>(document_->get_layer(i)), i, w(), h(), view_x_, view_y_, scale_);
+                if (auto l = get_image_layer(i))
+                    render_layer_to_buffer(*l, i, w(), h(), view_x_, view_y_, scale_);
             }
 
             if (document_->mode() == DocumentMode::FixedCanvas)
@@ -520,7 +527,8 @@ namespace mui
 
         for (size_t i = 0; i < document_->layer_count(); ++i)
         {
-            render_layer_to_buffer(*std::static_pointer_cast<ImageLayer>(document_->get_layer(i)), i, world_w, world_h, min_x, min_y, 1.0);
+            if (auto l = get_image_layer(i))
+                render_layer_to_buffer(*l, i, world_w, world_h, min_x, min_y, 1.0);
         }
 
         uchar *pixels = fl_read_image(nullptr, 0, 0, world_w, world_h, 0);

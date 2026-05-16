@@ -60,4 +60,50 @@ namespace mui
         void execute(InternalImageViewer *v) override;
         void undo(InternalImageViewer *v) override;
     };
+
+    struct CommandOpacity : public ViewerCommand
+    {
+        int idx;
+        double old_val, new_val;
+        CommandOpacity(int i, double o, double n) : idx(i), old_val(o), new_val(n) {}
+        void execute(InternalImageViewer *v) override;
+        void undo(InternalImageViewer *v) override;
+    };
+
+    struct CommandBlendMode : public ViewerCommand
+    {
+        int idx;
+        BlendMode old_val, new_val;
+        CommandBlendMode(int i, BlendMode o, BlendMode n) : idx(i), old_val(o), new_val(n) {}
+        void execute(InternalImageViewer *v) override;
+        void undo(InternalImageViewer *v) override;
+    };
+
+    struct CommandVisibility : public ViewerCommand
+    {
+        int idx;
+        bool old_val, new_val;
+        CommandVisibility(int i, bool o, bool n) : idx(i), old_val(o), new_val(n) {}
+        void execute(InternalImageViewer *v) override;
+        void undo(InternalImageViewer *v) override;
+    };
+
+    struct CommandLock : public ViewerCommand
+    {
+        int idx;
+        bool old_val, new_val;
+        CommandLock(int i, bool o, bool n) : idx(i), old_val(o), new_val(n) {}
+        void execute(InternalImageViewer *v) override;
+        void undo(InternalImageViewer *v) override;
+    };
+
+    struct CommandParent : public ViewerCommand
+    {
+        int idx;
+        int old_val, new_val;
+        CommandParent(int i, int o, int n) : idx(i), old_val(o), new_val(n) {}
+        void execute(InternalImageViewer *v) override;
+        void undo(InternalImageViewer *v) override;
+    };
+
 }
