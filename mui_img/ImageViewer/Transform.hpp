@@ -2,6 +2,7 @@
 
 #include "Types.hpp"
 #include <cmath>
+#include <array>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -69,6 +70,21 @@ namespace mui
                 max_y = std::max(max_y, ry);
             }
             return {cx + min_x, cy + min_y, max_x - min_x, max_y - min_y};
+        }
+
+        static inline std::array<Point2D, 4> get_layer_corners(const ImageLayer &l)
+        {
+            Rect2D b = l.get_effective_bounds();
+            double C_x = b.x + b.w * 0.5;
+            double C_y = b.y + b.h * 0.5;
+            double hw = b.w * 0.5;
+            double hh = b.h * 0.5;
+
+            return {
+                local_to_world(C_x - hw, C_y - hh, C_x, C_y, l.rotation_angle, l.flip_h, l.flip_v),
+                local_to_world(C_x + hw, C_y - hh, C_x, C_y, l.rotation_angle, l.flip_h, l.flip_v),
+                local_to_world(C_x + hw, C_y + hh, C_x, C_y, l.rotation_angle, l.flip_h, l.flip_v),
+                local_to_world(C_x - hw, C_y + hh, C_x, C_y, l.rotation_angle, l.flip_h, l.flip_v)};
         }
     };
 }

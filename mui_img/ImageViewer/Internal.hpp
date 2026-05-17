@@ -8,6 +8,7 @@
 #include <FL/fl_draw.H>
 #include <vector>
 #include <memory>
+#include <unordered_set>
 #include <cmath>
 #include <algorithm>
 #include <cstdio>
@@ -22,6 +23,44 @@ namespace mui
         int x, y, w, h;
         double scale, offset_x, offset_y, min_x, min_y;
     };
+    inline Rect2D layer_effective_rect(const ImageLayer &l) noexcept
+    {
+        return l.get_effective_bounds();
+    }
+
+    enum class DragMode
+    {
+        None,
+        Pan,
+        MoveLayer,
+        ScaleBR,
+        ScaleBL,
+        ScaleTR,
+        ScaleTL,
+        Rotate,
+        MinimapPan,
+        Crop,
+        Eyedropper
+    };
+
+    inline bool is_scale_mode(DragMode m) noexcept
+    {
+        return m == DragMode::ScaleBR || m == DragMode::ScaleBL ||
+               m == DragMode::ScaleTR || m == DragMode::ScaleTL;
+    }
+
+    inline void draw_checker(int bx, int by, int bw, int bh, int checker_size)
+    {
+        const auto &pal = ThemeManager::get_palette();
+        for (int j = 0; j < bh; j += checker_size)
+            for (int i = 0; i < bw; i += checker_size)
+            {
+                fl_color((((i / checker_size) + (j / checker_size)) % 2 == 0)
+                             ? pal.bg_main
+                             : pal.bg_sec);
+                fl_rectf(bx + i, by + j, checker_size, checker_size);
+            }
+    }
 
     class InternalImageViewer : public Fl_Widget
     {
@@ -56,27 +95,17 @@ namespace mui
         double orig_layer_sx_ = 1, orig_layer_sy_ = 1;
 
         int selected_layer_id_ = -1;
-        enum DragMode
-        {
-            None,
-            Pan,
-            MoveLayer,
-            ScaleBR,
-            ScaleBL,
-            ScaleTR,
-            ScaleTL,
-            Rotate,
-            MinimapPan,
-            Crop,
-            Eyedropper
-        };
-        DragMode drag_mode_ = None;
-        DragMode hover_mode_ = None;
+
+        std::unordered_set<int> selection_ids_;
+
+        std::vector<std::pair<int, std::pair<double, double>>> multi_drag_origins_;
+        DragMode drag_mode_ = DragMode::None;
+        DragMode hover_mode_ = DragMode::None;
 
         bool bilinear_filtering_ = true;
         int grid_size_;
         bool use_solid_bg_ = false;
-        Fl_Color solid_bg_color_;
+        Fl_Color solid_bg_color_ = 0;
 
         Fl_Offscreen bg_buffer_ = 0;
         int off_w_ = 0, off_h_ = 0;
@@ -87,10 +116,8 @@ namespace mui
         ViewerTool active_tool_ = ViewerTool::Select;
         int minimap_size_ = 150;
         int minimap_margin_ = 15;
-        double crop_start_x_ = 0;
-        double crop_start_y_ = 0;
-        double crop_end_x_ = 0;
-        double crop_end_y_ = 0;
+        double crop_start_x_ = 0, crop_start_y_ = 0;
+        double crop_end_x_ = 0, crop_end_y_ = 0;
 
         void *user_data_ = nullptr;
         void (*view_changed_thunk_)(void *) = nullptr;
@@ -103,13 +130,11 @@ namespace mui
             if (view_changed_thunk_ && user_data_)
                 view_changed_thunk_(user_data_);
         }
-
         void notify_layer_selected()
         {
             if (layer_selected_thunk_ && user_data_)
                 layer_selected_thunk_(user_data_);
         }
-
         void notify_right_click()
         {
             if (right_click_thunk_ && user_data_)
@@ -122,6 +147,69 @@ namespace mui
             redraw();
         }
 
+        void mouse_to_world(int mx, int my, double &wx, double &wy) const noexcept
+        {
+            wx = view_x_ + (mx - x()) / scale_;
+            wy = view_y_ + (my - y()) / scale_;
+        }
+
+        void world_to_screen(double wx, double wy, int &sx, int &sy) const noexcept
+        {
+            sx = x() + static_cast<int>(std::round((wx - view_x_) * scale_));
+            sy = y() + static_cast<int>(std::round((wy - view_y_) * scale_));
+        }
+
+        void set_primary_selection(int id)
+        {
+            selected_layer_id_ = id;
+            if (id == -1)
+                return;
+            selection_ids_.insert(id);
+        }
+
+        void clear_selection()
+        {
+            selected_layer_id_ = -1;
+            selection_ids_.clear();
+            multi_drag_origins_.clear();
+        }
+
+        bool is_in_selection(int layer_id) const noexcept
+        {
+            return selection_ids_.count(layer_id) > 0;
+        }
+
+        void toggle_selection(int layer_id)
+        {
+            if (selection_ids_.count(layer_id))
+            {
+                selection_ids_.erase(layer_id);
+                if (selected_layer_id_ == layer_id)
+                {
+                    selected_layer_id_ = selection_ids_.empty() ? -1
+                                                                : *selection_ids_.begin();
+                }
+            }
+            else
+            {
+                selection_ids_.insert(layer_id);
+                selected_layer_id_ = layer_id;
+            }
+        }
+
+        void capture_multi_drag_origins()
+        {
+            multi_drag_origins_.clear();
+            for (int id : selection_ids_)
+            {
+                int idx = document_->get_layer_index(id);
+                if (idx == -1)
+                    continue;
+                if (auto l = get_image_layer(idx))
+                    multi_drag_origins_.push_back({id, {l->x, l->y}});
+            }
+        }
+
     public:
         int get_selected_layer_index() const
         {
@@ -129,6 +217,8 @@ namespace mui
                 return -1;
             return document_->get_layer_index(selected_layer_id_);
         }
+
+        const std::unordered_set<int> &selection_ids() const { return selection_ids_; }
 
         std::shared_ptr<ImageLayer> get_selected_image_layer() const
         {
@@ -172,7 +262,6 @@ namespace mui
             notify_view_changed();
         }
 
-        // Made public to facilitate external command injection, especially for testing.
         void push_command(std::shared_ptr<ViewerCommand> cmd)
         {
             cmd->execute(this);
@@ -186,23 +275,20 @@ namespace mui
             if (index < 0 || index >= (int)document_->layer_count())
                 return false;
 
-            std::vector<int> visited_ids;
+            std::vector<int> visited;
             int current_id = document_->get_layer(index)->id;
-
             while (current_id != -1)
             {
-                if (std::find(visited_ids.begin(), visited_ids.end(), current_id) != visited_ids.end())
-                    return false; // Cycle detected in parent hierarchy.
-                visited_ids.push_back(current_id);
+                if (std::find(visited.begin(), visited.end(), current_id) != visited.end())
+                    return false;
+                visited.push_back(current_id);
 
-                int current_idx = document_->get_layer_index(current_id);
-                if (current_idx == -1)
-                    return false; // Should not happen
-
-                auto l = get_image_layer(current_idx);
+                int ci = document_->get_layer_index(current_id);
+                if (ci == -1)
+                    return false;
+                auto l = get_image_layer(ci);
                 if (!l || !l->visible)
                     return false;
-
                 current_id = l->parent_id;
             }
             return true;
@@ -218,7 +304,6 @@ namespace mui
                 max_y = document_->canvas_height();
                 return;
             }
-
             if (document_->layer_count() == 0)
             {
                 min_x = 0;
@@ -227,17 +312,15 @@ namespace mui
                 max_y = h() / scale_;
                 return;
             }
-            min_x = 1e99;
-            min_y = 1e99;
-            max_x = -1e99;
-            max_y = -1e99;
 
+            min_x = min_y = 1e99;
+            max_x = max_y = -1e99;
             for (size_t i = 0; i < document_->layer_count(); ++i)
             {
                 auto layer = std::static_pointer_cast<ImageLayer>(document_->get_layer(i));
-                Rect2D b = layer->get_effective_bounds();
-                Rect2D rot_b = Transform::get_rotated_bounds(b.x, b.y, b.w, b.h, layer->rotation_angle);
-
+                Rect2D b = layer_effective_rect(*layer);
+                Rect2D rot_b = Transform::get_rotated_bounds(b.x, b.y, b.w, b.h,
+                                                             layer->rotation_angle);
                 min_x = std::min(min_x, rot_b.x);
                 max_x = std::max(max_x, rot_b.x + rot_b.w);
                 min_y = std::min(min_y, rot_b.y);
@@ -263,8 +346,7 @@ namespace mui
             double max_x, max_y;
             get_world_bounds(info.min_x, info.min_y, max_x, max_y);
 
-            double vw_w = w() / scale_;
-            double vw_h = h() / scale_;
+            double vw_w = w() / scale_, vw_h = h() / scale_;
             info.min_x = std::min(info.min_x, view_x_);
             info.min_y = std::min(info.min_y, view_y_);
             max_x = std::max(max_x, view_x_ + vw_w);
@@ -272,13 +354,12 @@ namespace mui
 
             double world_w = std::max(max_x - info.min_x, 1.0);
             double world_h = std::max(max_y - info.min_y, 1.0);
-
             info.scale = std::min((info.w - 4.0) / world_w, (info.h - 4.0) / world_h);
             info.offset_x = info.x + (info.w - world_w * info.scale) * 0.5;
             info.offset_y = info.y + (info.h - world_h * info.scale) * 0.5;
-
             return info;
         }
+
         void clamp_view()
         {
             if (document_->layer_count() == 0 || w() == 0 || h() == 0 || scale_ <= 0.0)
@@ -287,29 +368,13 @@ namespace mui
             double min_x, min_y, max_x, max_y;
             get_world_bounds(min_x, min_y, max_x, max_y);
 
-            double sw = w() / scale_;
-            double sh = h() / scale_;
+            double sw = w() / scale_, sh = h() / scale_;
+            double world_w = max_x - min_x, world_h = max_y - min_y;
 
-            double world_w = max_x - min_x;
-            double world_h = max_y - min_y;
-
-            if (world_w <= sw)
-            {
-                view_x_ = min_x - (sw - world_w) * 0.5;
-            }
-            else
-            {
-                view_x_ = std::clamp(view_x_, min_x, max_x - sw);
-            }
-
-            if (world_h <= sh)
-            {
-                view_y_ = min_y - (sh - world_h) * 0.5;
-            }
-            else
-            {
-                view_y_ = std::clamp(view_y_, min_y, max_y - sh);
-            }
+            view_x_ = (world_w <= sw) ? min_x - (sw - world_w) * 0.5
+                                      : std::clamp(view_x_, min_x, max_x - sw);
+            view_y_ = (world_h <= sh) ? min_y - (sh - world_h) * 0.5
+                                      : std::clamp(view_y_, min_y, max_y - sh);
         }
 
         void sample_color(int mx, int my, double world_x, double world_y);
@@ -320,7 +385,9 @@ namespace mui
         bool hit_test_minimap(int mx, int my);
         void pan_minimap_to(int mx, int my);
         void draw_minimap();
-        void render_layer_to_buffer(const ImageLayer &layer, int layer_idx, int target_w, int target_h, double view_x, double view_y, double scale);
+        void render_layer_to_buffer(const ImageLayer &layer, int layer_idx,
+                                    int target_w, int target_h,
+                                    double view_x, double view_y, double scale);
         void draw() override;
         void export_image(const char *filepath);
         int hit_test(double world_x, double world_y);
@@ -343,6 +410,7 @@ namespace mui
             solid_bg_color_ = ThemeManager::get_palette().bg_main;
             last_checker_color1_ = Fl::get_color(ThemeManager::get_palette().bg_main);
         }
+
         friend class ImageViewer;
     };
 }

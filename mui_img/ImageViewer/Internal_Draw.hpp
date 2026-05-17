@@ -33,14 +33,7 @@ namespace mui
         else
         {
             const int checker_size = grid_size_;
-            for (int j = 0; j < bg_ch; j += checker_size)
-            {
-                for (int i = 0; i < bg_cw; i += checker_size)
-                {
-                    fl_color((((i / checker_size) + (j / checker_size)) % 2 == 0) ? ThemeManager::get_palette().bg_main : ThemeManager::get_palette().bg_sec);
-                    fl_rectf(bg_cx + i, bg_cy + j, checker_size, checker_size);
-                }
-            }
+            draw_checker(bg_cx, bg_cy, bg_cw, bg_ch, checker_size);
         }
 
         if (document_->mode() == DocumentMode::FixedCanvas)
@@ -64,119 +57,129 @@ namespace mui
 
     inline void InternalImageViewer::draw_overlays(int cx, int cy, int cw, int ch)
     {
-        int sel_idx = get_selected_layer_index();
-        if (auto l_ptr = get_image_layer(sel_idx))
+        int primary_sel_idx = get_selected_layer_index();
+
+        for (int layer_id : selection_ids_)
         {
-            const auto &l = *l_ptr;
-            if (!is_layer_visible(sel_idx))
-                return;
-
-            Rect2D b = l.get_effective_bounds();
-            int sx = cx + static_cast<int>(std::round((b.x - view_x_) * scale_));
-            int sy = cy + static_cast<int>(std::round((b.y - view_y_) * scale_));
-            int sw = std::max(1, static_cast<int>(std::round(b.w * scale_)));
-            int sh = std::max(1, static_cast<int>(std::round(b.h * scale_)));
-
-            double layer_cx = sx + sw * 0.5, layer_cy = sy + sh * 0.5;
-
-            if (active_tool_ == ViewerTool::Crop)
+            int sel_idx = document_->get_layer_index(layer_id);
+            if (auto l_ptr = get_image_layer(sel_idx))
             {
-                int full_sx = cx + static_cast<int>(std::round((l.x - view_x_) * scale_));
-                int full_sy = cy + static_cast<int>(std::round((l.y - view_y_) * scale_));
-                int full_sw = std::max(1, static_cast<int>(std::round(l.original_w * l.scale_x * scale_)));
-                int full_sh = std::max(1, static_cast<int>(std::round(l.original_h * l.scale_y * scale_)));
+                const auto &l = *l_ptr;
+                if (!is_layer_visible(sel_idx))
+                    continue;
 
-                double full_hw = full_sw * 0.5;
-                double full_hh = full_sh * 0.5;
-                double full_cx = full_sx + full_hw;
-                double full_cy = full_sy + full_hh;
+                bool is_primary = (sel_idx == primary_sel_idx);
 
-                Point2D tl = Transform::local_to_world(full_cx - full_hw, full_cy - full_hh, layer_cx, layer_cy, l.rotation_angle, l.flip_h, l.flip_v);
-                Point2D tr = Transform::local_to_world(full_cx + full_hw, full_cy - full_hh, layer_cx, layer_cy, l.rotation_angle, l.flip_h, l.flip_v);
-                Point2D br = Transform::local_to_world(full_cx + full_hw, full_cy + full_hh, layer_cx, layer_cy, l.rotation_angle, l.flip_h, l.flip_v);
-                Point2D bl = Transform::local_to_world(full_cx - full_hw, full_cy + full_hh, layer_cx, layer_cy, l.rotation_angle, l.flip_h, l.flip_v);
+                Rect2D b = l.get_effective_bounds();
+                int sx = cx + static_cast<int>(std::round((b.x - view_x_) * scale_));
+                int sy = cy + static_cast<int>(std::round((b.y - view_y_) * scale_));
+                int sw = std::max(1, static_cast<int>(std::round(b.w * scale_)));
+                int sh = std::max(1, static_cast<int>(std::round(b.h * scale_)));
 
-                fl_color(ThemeManager::get_palette().btn_frame.out_top);
-                fl_line_style(FL_DASH, 1);
+                double layer_cx = sx + sw * 0.5, layer_cy = sy + sh * 0.5;
+
+                if (is_primary && active_tool_ == ViewerTool::Crop)
+                {
+                    int full_sx = cx + static_cast<int>(std::round((l.x - view_x_) * scale_));
+                    int full_sy = cy + static_cast<int>(std::round((l.y - view_y_) * scale_));
+                    int full_sw = std::max(1, static_cast<int>(std::round(l.original_w * l.scale_x * scale_)));
+                    int full_sh = std::max(1, static_cast<int>(std::round(l.original_h * l.scale_y * scale_)));
+
+                    double full_hw = full_sw * 0.5;
+                    double full_hh = full_sh * 0.5;
+                    double full_cx = full_sx + full_hw;
+                    double full_cy = full_sy + full_hh;
+
+                    Point2D tl = Transform::local_to_world(full_cx - full_hw, full_cy - full_hh, layer_cx, layer_cy, l.rotation_angle, l.flip_h, l.flip_v);
+                    Point2D tr = Transform::local_to_world(full_cx + full_hw, full_cy - full_hh, layer_cx, layer_cy, l.rotation_angle, l.flip_h, l.flip_v);
+                    Point2D br = Transform::local_to_world(full_cx + full_hw, full_cy + full_hh, layer_cx, layer_cy, l.rotation_angle, l.flip_h, l.flip_v);
+                    Point2D bl = Transform::local_to_world(full_cx - full_hw, full_cy + full_hh, layer_cx, layer_cy, l.rotation_angle, l.flip_h, l.flip_v);
+
+                    fl_color(ThemeManager::get_palette().btn_frame.out_top);
+                    fl_line_style(FL_DASH, 1);
+                    fl_begin_loop();
+                    fl_vertex(tl.x, tl.y);
+                    fl_vertex(tr.x, tr.y);
+                    fl_vertex(br.x, br.y);
+                    fl_vertex(bl.x, bl.y);
+                    fl_end_loop();
+                    fl_line_style(0);
+                }
+
+                if (is_primary)
+                    fl_color(ThemeManager::get_palette().selection);
+                else
+                    fl_color(fl_color_average(ThemeManager::get_palette().selection, ThemeManager::get_palette().bg_main, 0.5f));
+                fl_line_style(FL_DASH, ThemeManager::get_palette().metrics.imageviewer_selection_dash_width);
+
+                double hw = sw * 0.5;
+                double hh = sh * 0.5;
+
+                Point2D tl = Transform::local_to_world(layer_cx - hw, layer_cy - hh, layer_cx, layer_cy, l.rotation_angle, l.flip_h, l.flip_v);
+                Point2D tr = Transform::local_to_world(layer_cx + hw, layer_cy - hh, layer_cx, layer_cy, l.rotation_angle, l.flip_h, l.flip_v);
+                Point2D br = Transform::local_to_world(layer_cx + hw, layer_cy + hh, layer_cx, layer_cy, l.rotation_angle, l.flip_h, l.flip_v);
+                Point2D bl = Transform::local_to_world(layer_cx - hw, layer_cy + hh, layer_cx, layer_cy, l.rotation_angle, l.flip_h, l.flip_v);
+
                 fl_begin_loop();
                 fl_vertex(tl.x, tl.y);
                 fl_vertex(tr.x, tr.y);
                 fl_vertex(br.x, br.y);
                 fl_vertex(bl.x, bl.y);
                 fl_end_loop();
+
+                if (is_primary && !l.locked)
+                {
+                    fl_line_style(FL_SOLID, 1);
+                    draw_handle(static_cast<int>(tl.x), static_cast<int>(tl.y), hover_mode_ == DragMode::ScaleTL);
+                    draw_handle(static_cast<int>(tr.x), static_cast<int>(tr.y), hover_mode_ == DragMode::ScaleTR);
+                    draw_handle(static_cast<int>(bl.x), static_cast<int>(bl.y), hover_mode_ == DragMode::ScaleBL);
+                    draw_handle(static_cast<int>(br.x), static_cast<int>(br.y), hover_mode_ == DragMode::ScaleBR);
+                }
+
                 fl_line_style(0);
             }
-
-            fl_color(ThemeManager::get_palette().selection);
-            fl_line_style(FL_DASH, ThemeManager::get_palette().metrics.imageviewer_selection_dash_width);
-
-            double hw = sw * 0.5;
-            double hh = sh * 0.5;
-
-            Point2D tl = Transform::local_to_world(layer_cx - hw, layer_cy - hh, layer_cx, layer_cy, l.rotation_angle, l.flip_h, l.flip_v);
-            Point2D tr = Transform::local_to_world(layer_cx + hw, layer_cy - hh, layer_cx, layer_cy, l.rotation_angle, l.flip_h, l.flip_v);
-            Point2D br = Transform::local_to_world(layer_cx + hw, layer_cy + hh, layer_cx, layer_cy, l.rotation_angle, l.flip_h, l.flip_v);
-            Point2D bl = Transform::local_to_world(layer_cx - hw, layer_cy + hh, layer_cx, layer_cy, l.rotation_angle, l.flip_h, l.flip_v);
-
-            fl_begin_loop();
-            fl_vertex(tl.x, tl.y);
-            fl_vertex(tr.x, tr.y);
-            fl_vertex(br.x, br.y);
-            fl_vertex(bl.x, bl.y);
-            fl_end_loop();
-
-            if (!l.locked)
-            {
-                fl_line_style(FL_SOLID, 1);
-                draw_handle(static_cast<int>(tl.x), static_cast<int>(tl.y), hover_mode_ == ScaleTL);
-                draw_handle(static_cast<int>(tr.x), static_cast<int>(tr.y), hover_mode_ == ScaleTR);
-                draw_handle(static_cast<int>(bl.x), static_cast<int>(bl.y), hover_mode_ == ScaleBL);
-                draw_handle(static_cast<int>(br.x), static_cast<int>(br.y), hover_mode_ == ScaleBR);
-            }
-
-            fl_line_style(0);
         }
 
         int sel_idx_for_crop = get_selected_layer_index();
-        if (drag_mode_ == Crop && sel_idx_for_crop >= 0)
+        if (drag_mode_ == DragMode::Crop && sel_idx_for_crop >= 0)
         {
             if (auto l_ptr = get_image_layer(sel_idx_for_crop))
             {
                 auto &l = *l_ptr;
 
                 double lx = l.x;
-            double ly = l.y;
-            double lw = l.original_w * l.scale_x;
-            double lh = l.original_h * l.scale_y;
-            if (l.crop_w >= 0 && l.crop_h >= 0)
-            {
-                lx += l.crop_x * l.scale_x;
-                ly += l.crop_y * l.scale_y;
-                lw = l.crop_w * l.scale_x;
-                lh = l.crop_h * l.scale_y;
-            }
+                double ly = l.y;
+                double lw = l.original_w * l.scale_x;
+                double lh = l.original_h * l.scale_y;
+                if (l.crop_w >= 0 && l.crop_h >= 0)
+                {
+                    lx += l.crop_x * l.scale_x;
+                    ly += l.crop_y * l.scale_y;
+                    lw = l.crop_w * l.scale_x;
+                    lh = l.crop_h * l.scale_y;
+                }
 
-            double rot_cx = lx + lw * 0.5;
-            double rot_cy = ly + lh * 0.5;
+                double rot_cx = lx + lw * 0.5;
+                double rot_cy = ly + lh * 0.5;
 
-            double min_lx = std::min(crop_start_x_, crop_end_x_);
-            double min_ly = std::min(crop_start_y_, crop_end_y_);
-            double max_lx = std::max(crop_start_x_, crop_end_x_);
-            double max_ly = std::max(crop_start_y_, crop_end_y_);
+                double min_lx = std::min(crop_start_x_, crop_end_x_);
+                double min_ly = std::min(crop_start_y_, crop_end_y_);
+                double max_lx = std::max(crop_start_x_, crop_end_x_);
+                double max_ly = std::max(crop_start_y_, crop_end_y_);
 
-            Point2D pts[4] = {{min_lx, min_ly}, {max_lx, min_ly}, {max_lx, max_ly}, {min_lx, max_ly}};
+                Point2D pts[4] = {{min_lx, min_ly}, {max_lx, min_ly}, {max_lx, max_ly}, {min_lx, max_ly}};
 
-            fl_color(ThemeManager::get_palette().fg_main);
-            fl_line_style(FL_DASH, 2);
-            fl_begin_loop();
-            for (int j = 0; j < 4; ++j)
-            {
-                Point2D w_pt = Transform::local_to_world(pts[j].x, pts[j].y, rot_cx, rot_cy, l.rotation_angle, l.flip_h, l.flip_v);
-                int screen_x = cx + static_cast<int>(std::round((w_pt.x - view_x_) * scale_));
-                int screen_y = cy + static_cast<int>(std::round((w_pt.y - view_y_) * scale_));
-                fl_vertex(screen_x, screen_y);
-            }
-            fl_end_loop();
+                fl_color(ThemeManager::get_palette().fg_main);
+                fl_line_style(FL_DASH, 2);
+                fl_begin_loop();
+                for (int j = 0; j < 4; ++j)
+                {
+                    Point2D w_pt = Transform::local_to_world(pts[j].x, pts[j].y, rot_cx, rot_cy, l.rotation_angle, l.flip_h, l.flip_v);
+                    int screen_x = cx + static_cast<int>(std::round((w_pt.x - view_x_) * scale_));
+                    int screen_y = cy + static_cast<int>(std::round((w_pt.y - view_y_) * scale_));
+                    fl_vertex(screen_x, screen_y);
+                }
+                fl_end_loop();
             }
             fl_line_style(0);
         }

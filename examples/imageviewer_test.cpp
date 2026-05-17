@@ -373,6 +373,72 @@ void test_layer_management(mui::ImageViewer &viewer)
     std::cout << "PASSED: test_layer_management" << std::endl;
 }
 
+void test_multi_selection(mui::ImageViewer &viewer)
+{
+    std::cout << "Running: test_multi_selection..." << std::endl;
+    viewer.clear_layers();
+    uchar pixels[1 * 1 * 3] = {0, 0, 0};
+    auto img = std::make_shared<mui::Image>(new Fl_RGB_Image(pixels, 1, 1, 3));
+
+    // 1. Add layers
+    viewer.add_layer(img, "Layer 1", 0, 0);   // index 0
+    viewer.add_layer(img, "Layer 2", 10, 10); // index 1
+    viewer.add_layer(img, "Layer 3", 20, 20); // index 2
+    assert(viewer.document()->layer_count() == 3);
+
+    // 2. Create a multi-selection using the public API
+    viewer.select_layer(0);     // Selects layer 1, clears others
+    viewer.add_to_selection(2); // Adds layer 3 to selection
+
+    assert(viewer.selection_count() == 2);
+    assert(viewer.is_selected(0) == true);
+    assert(viewer.is_selected(1) == false);
+    assert(viewer.is_selected(2) == true);
+    // The last added layer becomes primary
+    assert(viewer.selected_layer() == 2);
+
+    // 3. Test group move (by simulating the resulting commands)
+    auto l1 = viewer.get_image_layer(0);
+    auto l3 = viewer.get_image_layer(2);
+    double dx = 50.0, dy = -50.0;
+    // In a real scenario, the app would push one command per moved layer.
+    viewer.push_command(std::make_shared<mui::CommandMove>(l1->id, l1->x, l1->y, l1->x + dx, l1->y + dy));
+    viewer.push_command(std::make_shared<mui::CommandMove>(l3->id, l3->x, l3->y, l3->x + dx, l3->y + dy));
+
+    assert(approx_equal(viewer.get_image_layer(0)->x, 50.0));
+    assert(approx_equal(viewer.get_image_layer(0)->y, -50.0));
+    assert(approx_equal(viewer.get_image_layer(1)->x, 10.0)); // Unselected is not moved
+    assert(approx_equal(viewer.get_image_layer(2)->x, 70.0));
+    assert(approx_equal(viewer.get_image_layer(2)->y, -30.0));
+
+    // Undo the moves
+    viewer.undo(); // undo move on l3
+    viewer.undo(); // undo move on l1
+    assert(approx_equal(viewer.get_image_layer(0)->x, 0.0));
+    assert(approx_equal(viewer.get_image_layer(2)->x, 20.0));
+
+    // 4. Test group delete (simulating the logic from the event handler)
+    viewer.select_layer(0);
+    viewer.add_to_selection(2);
+
+    // The handler sorts indices descending to avoid invalidation: {2, 0}
+    auto layer_to_delete_2 = viewer.document()->get_layer(2);
+    auto layer_to_delete_0 = viewer.document()->get_layer(0);
+    viewer.push_command(std::make_shared<mui::CommandDelete>(2, layer_to_delete_2));
+    viewer.push_command(std::make_shared<mui::CommandDelete>(0, layer_to_delete_0));
+
+    assert(viewer.document()->layer_count() == 1);
+    assert(viewer.document()->get_layer(0)->name == "Layer 2");
+
+    // Undo the deletes
+    viewer.undo(); // Restores "Layer 1" at index 0
+    viewer.undo(); // Restores "Layer 3" at index 2
+    assert(viewer.document()->layer_count() == 3);
+    assert(viewer.document()->get_layer(1)->name == "Layer 2");
+
+    std::cout << "PASSED: test_multi_selection" << std::endl;
+}
+
 int main(int, char **)
 {
     // We need a window for FLTK to be happy, but we don't need to show it.
@@ -393,6 +459,7 @@ int main(int, char **)
         test_view_manipulation(*viewer);
         test_crop(*viewer);
         test_layer_management(*viewer);
+        test_multi_selection(*viewer);
     }
     catch (const std::exception &e)
     {
