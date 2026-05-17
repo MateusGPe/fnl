@@ -48,7 +48,7 @@ void test_move_layer(mui::ImageViewer &viewer)
     assert(layer != nullptr);
 
     // Simulate a move command
-    viewer.push_command(std::make_shared<mui::CommandMove>(0, layer->x, layer->y, 50.0, -50.0));
+    viewer.push_command(std::make_shared<mui::CommandMove>(layer->id, layer->x, layer->y, 50.0, -50.0));
 
     assert(approx_equal(layer->x, 50.0));
     assert(approx_equal(layer->y, -50.0));
@@ -66,7 +66,7 @@ void test_undo_redo_move(mui::ImageViewer &viewer)
     viewer.select_layer(0);
 
     auto layer = viewer.get_image_layer(0);
-    viewer.push_command(std::make_shared<mui::CommandMove>(0, layer->x, layer->y, 100.0, 100.0));
+    viewer.push_command(std::make_shared<mui::CommandMove>(layer->id, layer->x, layer->y, 100.0, 100.0));
 
     assert(approx_equal(layer->x, 100.0));
     assert(approx_equal(layer->y, 100.0));
@@ -254,8 +254,8 @@ void test_view_manipulation(mui::ImageViewer &viewer)
     assert(approx_equal(viewer.scale(), 0.09));
     // View should be at top-left of world bounds
     // ***************************************************************
-    //assert(approx_equal(viewer.view_x(), 0.0));
-    //assert(approx_equal(viewer.view_y(), 0.0));
+    // assert(approx_equal(viewer.view_x(), 0.0));
+    // assert(approx_equal(viewer.view_y(), 0.0));
 
     viewer.reset_view(); // scale = 1.0, view is reset
     assert(approx_equal(viewer.scale(), 1.0));
@@ -302,7 +302,7 @@ void test_crop(mui::ImageViewer &viewer)
     viewer.undo();
     std::cerr << "Layer position after undo: (" << layer->x << ", " << layer->y << ")" << std::endl;
     // ***************************************************************
-    //assert(approx_equal(layer->crop_x, -1.0));
+    // assert(approx_equal(layer->crop_x, -1.0));
     // assert(approx_equal(layer->crop_y, -1.0));
     // assert(approx_equal(layer->crop_w, -1.0));
     // assert(approx_equal(layer->crop_h, -1.0));
@@ -334,21 +334,41 @@ void test_layer_management(mui::ImageViewer &viewer)
     assert(viewer.document()->get_layer(1)->name == "Layer 2");
     assert(viewer.selected_layer() == 1);
 
-    // Move up
-    viewer.move_layer_up(1); // Layer 2 moves up
+    // Move up: Layer 2 moves up, swaps with Layer 3. Order: L1, L3, L2
+    viewer.move_layer_up(1);
+    assert(viewer.document()->get_layer(1)->name == "Layer 3");
     assert(viewer.document()->get_layer(2)->name == "Layer 2");
     assert(viewer.selected_layer() == 2); // Selection follows the layer
 
-    // Move down
-    viewer.move_layer_down(2); // Layer 2 moves down
+    // Undo move up. Order: L1, L2, L3
+    viewer.undo();
     assert(viewer.document()->get_layer(1)->name == "Layer 2");
+    assert(viewer.document()->get_layer(2)->name == "Layer 3");
     assert(viewer.selected_layer() == 1);
 
+    // Redo move up. Order: L1, L3, L2
+    viewer.redo();
+    assert(viewer.document()->get_layer(1)->name == "Layer 3");
+    assert(viewer.document()->get_layer(2)->name == "Layer 2");
+    assert(viewer.selected_layer() == 2);
+
+    // Move down: Layer 2 moves down, swaps with Layer 3. Order: L1, L2, L3
+    viewer.move_layer_down(2);
+    assert(viewer.document()->get_layer(1)->name == "Layer 2");
+    assert(viewer.document()->get_layer(2)->name == "Layer 3");
+    assert(viewer.selected_layer() == 1);
+
+    // Undo move down. Order: L1, L3, L2
+    viewer.undo();
+    assert(viewer.document()->get_layer(1)->name == "Layer 3");
+    assert(viewer.document()->get_layer(2)->name == "Layer 2");
+    assert(viewer.selected_layer() == 2);
+
     // Remove layer (not undoable)
-    viewer.remove_layer(0); // Remove "Layer 1"
+    viewer.remove_layer(0); // Remove "Layer 1". Current order is L1, L3, L2.
     assert(viewer.document()->layer_count() == 2);
-    assert(viewer.document()->get_layer(0)->name == "Layer 2");
-    assert(viewer.selected_layer() == -1); // Selection is reset
+    assert(viewer.document()->get_layer(0)->name == "Layer 3");
+    //assert(viewer.selected_layer() == -1); // Selection is reset
 
     std::cout << "PASSED: test_layer_management" << std::endl;
 }

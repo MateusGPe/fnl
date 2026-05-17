@@ -64,10 +64,11 @@ namespace mui
 
     inline void InternalImageViewer::draw_overlays(int cx, int cy, int cw, int ch)
     {
-        if (auto l_ptr = get_image_layer(selected_layer_index_))
+        int sel_idx = get_selected_layer_index();
+        if (auto l_ptr = get_image_layer(sel_idx))
         {
             const auto &l = *l_ptr;
-            if (!is_layer_visible(selected_layer_index_))
+            if (!is_layer_visible(sel_idx))
                 return;
 
             Rect2D b = l.get_effective_bounds();
@@ -136,9 +137,10 @@ namespace mui
             fl_line_style(0);
         }
 
-        if (drag_mode_ == Crop && selected_layer_index_ >= 0 && selected_layer_index_ < (int)document_->layer_count())
+        int sel_idx_for_crop = get_selected_layer_index();
+        if (drag_mode_ == Crop && sel_idx_for_crop >= 0)
         {
-            if (auto l_ptr = get_image_layer(selected_layer_index_))
+            if (auto l_ptr = get_image_layer(sel_idx_for_crop))
             {
                 auto &l = *l_ptr;
 

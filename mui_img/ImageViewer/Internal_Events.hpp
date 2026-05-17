@@ -9,7 +9,7 @@ namespace mui
 {
     inline InternalImageViewer::DragMode InternalImageViewer::hit_test_gizmo(int mx, int my)
     {
-        if (auto l_ptr = get_image_layer(selected_layer_index_))
+        if (auto l_ptr = get_selected_image_layer())
         {
             if (l_ptr->locked)
                 return None;
@@ -106,9 +106,9 @@ namespace mui
 
     inline void InternalImageViewer::sample_color(int mx, int my, double world_x, double world_y)
     {
-        if (auto l = get_image_layer(selected_layer_index_))
+        if (auto l = get_selected_image_layer())
         {
-            if (l->image && l->image->handle() && l->visible)
+            if (l->image && l->image->handle() && is_layer_visible(get_selected_layer_index()))
             {
                 double local_wx, local_wy;
                 world_to_layer_local(*l, world_x, world_y, local_wx, local_wy);
@@ -186,14 +186,15 @@ namespace mui
         {
         case FL_KEYBOARD:
         {
-            if (auto l = get_image_layer(selected_layer_index_))
+            int sel_idx = get_selected_layer_index();
+            if (auto l = get_image_layer(sel_idx))
             {
                 if (l->locked)
                     break;
 
                 if (Fl::event_key() == FL_Delete || Fl::event_key() == FL_BackSpace)
                 {
-                    auto cmd = std::make_shared<CommandDelete>(selected_layer_index_, l);
+                    auto cmd = std::make_shared<CommandDelete>(sel_idx, l);
                     push_command(cmd);
                     return 1;
                 }
@@ -209,7 +210,7 @@ namespace mui
                 }
                 if (dx != 0.0 || dy != 0.0)
                 {
-                    push_command(std::make_shared<CommandMove>(selected_layer_index_, l->x, l->y, l->x + dx, l->y + dy));
+                    push_command(std::make_shared<CommandMove>(l->id, l->x, l->y, l->x + dx, l->y + dy));
                     return 1;
                 }
             }
@@ -229,9 +230,9 @@ namespace mui
             if (Fl::event_button() == FL_RIGHT_MOUSE)
             {
                 int hit_index = hit_test(world_x, world_y);
-                if (hit_index != -1 && hit_index != selected_layer_index_)
+                if (hit_index != -1 && hit_index != get_selected_layer_index())
                 {
-                    selected_layer_index_ = hit_index;
+                    selected_layer_id_ = document_->get_layer(hit_index)->id;
                     notify_layer_selected();
                     redraw();
                 }
@@ -249,7 +250,7 @@ namespace mui
                 }
                 if (active_tool_ == ViewerTool::Select || active_tool_ == ViewerTool::Move)
                 {
-                    if (auto l = get_image_layer(selected_layer_index_))
+                    if (auto l = get_selected_image_layer())
                     {
                         if (l->locked) break;
                         DragMode mode = hit_test_gizmo(last_mouse_x_, last_mouse_y_);
@@ -271,7 +272,7 @@ namespace mui
                 }
                 else if (active_tool_ == ViewerTool::Crop)
                 {
-                    if (auto l_ptr = get_image_layer(selected_layer_index_))
+                    if (auto l_ptr = get_selected_image_layer())
                     {
                         const auto &l = *l_ptr;
                         double local_wx, local_wy;
@@ -292,13 +293,13 @@ namespace mui
                 else if (active_tool_ == ViewerTool::Move)
                 {
                     int hit_index = hit_test(world_x, world_y);
-                    if (hit_index != selected_layer_index_)
+                    if (hit_index != -1 && hit_index != get_selected_layer_index())
                     {
-                        selected_layer_index_ = hit_index;
+                        selected_layer_id_ = document_->get_layer(hit_index)->id;
                         notify_layer_selected();
                         redraw();
                     }
-                    if (auto l = get_image_layer(selected_layer_index_))
+                    if (auto l = get_selected_image_layer())
                     {
                         if (!l->locked) {
                             drag_mode_ = MoveLayer;
@@ -311,14 +312,14 @@ namespace mui
                 {
                     int hit_index = hit_test(world_x, world_y);
 
-                    if (hit_index != selected_layer_index_)
+                    if (hit_index != -1 && hit_index != get_selected_layer_index())
                     {
-                        selected_layer_index_ = hit_index;
+                        selected_layer_id_ = document_->get_layer(hit_index)->id;
                         notify_layer_selected();
                         redraw();
                     }
 
-                    if (auto l = get_image_layer(selected_layer_index_))
+                    if (auto l = get_selected_image_layer())
                     {
                         if (!l->locked) {
                             drag_mode_ = MoveLayer;
@@ -355,14 +356,14 @@ namespace mui
             }
             else if (drag_mode_ == MoveLayer)
             {
-                if (auto l = get_image_layer(selected_layer_index_))
+                if (auto l = get_selected_image_layer())
                 {
                     double target_x = orig_layer_x_ + (world_x - drag_start_x_);
                     double target_y = orig_layer_y_ + (world_y - drag_start_y_);
                     const double SNAP_THRESHOLD = 10.0 / scale_;
                     for (size_t i = 0; i < document_->layer_count(); ++i)
                     {
-                        if ((int)i == selected_layer_index_)
+                        if ((int)i == get_selected_layer_index())
                             continue;
                         if (auto other_l = get_image_layer(i))
                         {
@@ -380,7 +381,7 @@ namespace mui
             }
             else if (drag_mode_ == Crop)
             {
-                const auto &l = *get_image_layer(selected_layer_index_);
+                const auto &l = *get_selected_image_layer();
                 double local_wx, local_wy;
                 world_to_layer_local(l, world_x, world_y, local_wx, local_wy);
 
@@ -395,9 +396,9 @@ namespace mui
                 return 1;
             }
             else if ((drag_mode_ == ScaleBR || drag_mode_ == ScaleTL || drag_mode_ == ScaleTR || drag_mode_ == ScaleBL) &&
-                     get_image_layer(selected_layer_index_))
+                     get_selected_image_layer())
             {
-                auto &l = *get_image_layer(selected_layer_index_);
+                auto &l = *get_selected_image_layer();
                 Rect2D b = l.get_effective_bounds();
                 double orig_draw_w = b.w * orig_layer_sx_ / l.scale_x;
                 double orig_draw_h = b.h * orig_layer_sy_ / l.scale_y;
@@ -445,17 +446,29 @@ namespace mui
         {
             if (drag_mode_ == MoveLayer)
             {
-                if (auto l = get_image_layer(selected_layer_index_))
+                if (auto l = get_selected_image_layer())
                 {
                     if (l->x != orig_layer_x_ || l->y != orig_layer_y_)
                     {
-                        push_command(std::make_shared<CommandMove>(selected_layer_index_, orig_layer_x_, orig_layer_y_, l->x, l->y));
+                        push_command(std::make_shared<CommandMove>(l->id, orig_layer_x_, orig_layer_y_, l->x, l->y));
+                    }
+                }
+            }
+            else if ((drag_mode_ == ScaleBR || drag_mode_ == ScaleTL || drag_mode_ == ScaleTR || drag_mode_ == ScaleBL))
+            {
+                if (auto l = get_selected_image_layer())
+                {
+                    if (l->x != orig_layer_x_ || l->y != orig_layer_y_ || l->scale_x != orig_layer_sx_ || l->scale_y != orig_layer_sy_)
+                    {
+                        push_command(std::make_shared<CommandScale>(l->id, orig_layer_x_, orig_layer_y_, orig_layer_sx_, orig_layer_sy_, l->x, l->y, l->scale_x, l->scale_y));
                     }
                 }
             }
             else if (drag_mode_ == Crop)
             {
-                auto &l = *get_image_layer(selected_layer_index_);
+                int sel_idx = get_selected_layer_index();
+                if (sel_idx < 0) return 1;
+                auto &l = *get_image_layer(sel_idx);
                 if (l.image && l.image->handle())
                 {
                     const int img_w = l.image->data_w();
@@ -505,7 +518,7 @@ namespace mui
                         double final_l_x = l.x + (W.x - C_new_unrot_x);
                         double final_l_y = l.y + (W.y - C_new_unrot_y);
 
-                        auto cmd = std::make_shared<CommandCrop>(selected_layer_index_, l.crop_x, l.crop_y, l.crop_w, l.crop_h, cx_crop, cy_crop, cw_crop, ch_crop, l.x, l.y, final_l_x, final_l_y);
+                        auto cmd = std::make_shared<CommandCrop>(l.id, l.crop_x, l.crop_y, l.crop_w, l.crop_h, cx_crop, cy_crop, cw_crop, ch_crop, l.x, l.y, final_l_x, final_l_y);
                         push_command(cmd);
                     }
                 }

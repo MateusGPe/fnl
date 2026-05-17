@@ -29,12 +29,14 @@ namespace mui
         friend struct CommandCrop;
         friend struct CommandFlip;
         friend struct CommandRotate;
+        friend struct CommandScale;
         friend struct CommandDelete;
         friend struct CommandOpacity;
         friend struct CommandBlendMode;
         friend struct CommandVisibility;
         friend struct CommandLock;
         friend struct CommandParent;
+        friend struct CommandMoveLayer;
 
     protected:
         std::vector<std::shared_ptr<ViewerCommand>> undo_stack_;
@@ -53,7 +55,7 @@ namespace mui
         double orig_layer_x_ = 0, orig_layer_y_ = 0;
         double orig_layer_sx_ = 1, orig_layer_sy_ = 1;
 
-        int selected_layer_index_ = -1;
+        int selected_layer_id_ = -1;
         enum DragMode
         {
             None,
@@ -121,6 +123,18 @@ namespace mui
         }
 
     public:
+        int get_selected_layer_index() const
+        {
+            if (selected_layer_id_ == -1)
+                return -1;
+            return document_->get_layer_index(selected_layer_id_);
+        }
+
+        std::shared_ptr<ImageLayer> get_selected_image_layer() const
+        {
+            return get_image_layer(get_selected_layer_index());
+        }
+
         std::shared_ptr<ImageLayer> get_image_layer(int index) const
         {
             if (index < 0 || index >= (int)document_->layer_count())
@@ -172,34 +186,24 @@ namespace mui
             if (index < 0 || index >= (int)document_->layer_count())
                 return false;
 
-            std::vector<int> visited_indices;
-            int curr = index;
-            while (curr != -1)
-            {
-                // The parent lookup is an O(N) scan. For deep hierarchies, this can be slow.
-                // A map from layer ID to index would improve this to O(1).
-                if (std::find(visited_indices.begin(), visited_indices.end(), curr) != visited_indices.end())
-                    return false; // Cycle detected in parent hierarchy.
-                visited_indices.push_back(curr);
+            std::vector<int> visited_ids;
+            int current_id = document_->get_layer(index)->id;
 
-                auto l = get_image_layer(curr);
+            while (current_id != -1)
+            {
+                if (std::find(visited_ids.begin(), visited_ids.end(), current_id) != visited_ids.end())
+                    return false; // Cycle detected in parent hierarchy.
+                visited_ids.push_back(current_id);
+
+                int current_idx = document_->get_layer_index(current_id);
+                if (current_idx == -1)
+                    return false; // Should not happen
+
+                auto l = get_image_layer(current_idx);
                 if (!l || !l->visible)
                     return false;
 
-                int pid = l->parent_id;
-                if (pid == -1)
-                    break; // Reached root of this branch.
-
-                int parent_idx = -1;
-                for (int i = 0; i < (int)document_->layer_count(); ++i)
-                {
-                    if (document_->get_layer(i)->id == pid)
-                    {
-                        parent_idx = i;
-                        break;
-                    }
-                }
-                curr = parent_idx;
+                current_id = l->parent_id;
             }
             return true;
         }
