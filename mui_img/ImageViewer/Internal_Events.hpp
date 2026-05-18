@@ -179,19 +179,21 @@ namespace mui
             // Delete / Backspace → remove all selected layers
             if (key == FL_Delete || key == FL_BackSpace)
             {
-                // Collect and sort descending so indices stay valid
-                std::vector<int> to_delete;
-                for (int id : selection_ids_)
+                if (!selection_ids_.empty())
                 {
-                    int idx = document_->get_layer_index(id);
-                    if (idx >= 0)
-                        to_delete.push_back(idx);
+                    perform_heavy_undoable_action([this]()
+                    {
+                        // Collect and sort descending so indices stay valid
+                        std::vector<int> to_delete;
+                        for (int id : selection_ids_)
+                            if (int idx = document_->get_layer_index(id); idx >= 0)
+                                to_delete.push_back(idx);
+                        std::sort(to_delete.rbegin(), to_delete.rend());
+                        for (int idx : to_delete)
+                            document_->remove_layer(idx);
+                        clear_selection();
+                    });
                 }
-                std::sort(to_delete.rbegin(), to_delete.rend());
-                for (int idx : to_delete)
-                    push_command(std::make_shared<CommandDelete>(
-                        idx, document_->get_layer(idx)));
-                clear_selection();
                 return 1;
             }
 
@@ -215,8 +217,11 @@ namespace mui
             }
             if (dx != 0.0 || dy != 0.0)
             {
-                push_command(std::make_shared<CommandMove>(l->id, l->x, l->y,
-                                                           l->x + dx, l->y + dy));
+                perform_light_undoable_action({sel_idx}, [l, dx, dy]()
+                                              {
+                    l->x += dx;
+                    l->y += dy;
+                });
                 return 1;
             }
             break;
@@ -232,6 +237,7 @@ namespace mui
             drag_start_x_ = world_x;
             drag_start_y_ = world_y;
             drag_mode_ = DragMode::None;
+            drag_undo_state_pushed_ = false;
 
             // --- Right click ------------------------------------------
             if (Fl::event_button() == FL_RIGHT_MOUSE)
@@ -370,6 +376,20 @@ namespace mui
             double dx = Fl::event_x() - last_mouse_x_;
             double dy = Fl::event_y() - last_mouse_y_;
 
+            if ((is_scale_mode(drag_mode_) || drag_mode_ == DragMode::MoveLayer) && !drag_undo_record_)
+            {
+                drag_undo_record_ = std::make_unique<LayerPropsChangeRecord>();
+                for (int id : selection_ids_)
+                {
+                    int idx = document_->get_layer_index(id);
+                    if (auto l = get_image_layer(idx))
+                    {
+                        drag_undo_record_->props[id] = l->clone();
+                    }
+                }
+                drag_undo_state_pushed_ = true;
+            }
+
             if (drag_mode_ == DragMode::MinimapPan)
             {
                 pan_minimap_to(Fl::event_x(), Fl::event_y());
@@ -500,46 +520,17 @@ namespace mui
         // ---------------------------------------------------------------
         case FL_RELEASE:
         {
-            if (drag_mode_ == DragMode::MoveLayer)
+            if (drag_undo_state_pushed_ && drag_undo_record_)
             {
-                if (selection_ids_.size() > 1)
-                {
-                    // Emit one move command per moved layer
-                    for (auto &[id, origin] : multi_drag_origins_)
-                    {
-                        int idx = document_->get_layer_index(id);
-                        if (idx < 0)
-                            continue;
-                        if (auto lp = get_image_layer(idx))
-                        {
-                            if (lp->x != origin.first || lp->y != origin.second)
-                                push_command(std::make_shared<CommandMove>(
-                                    id, origin.first, origin.second, lp->x, lp->y));
-                        }
-                    }
-                }
-                else if (auto lp = get_selected_image_layer())
-                {
-                    if (lp->x != orig_layer_x_ || lp->y != orig_layer_y_)
-                        push_command(std::make_shared<CommandMove>(
-                            lp->id, orig_layer_x_, orig_layer_y_, lp->x, lp->y));
-                }
+                // Finalize the lightweight undo record by swapping its state
+                // with the final state of the layers.
+                drag_undo_record_->apply(this);
+                push_undo_record(std::move(drag_undo_record_));
             }
-            else if (is_scale_mode(drag_mode_))
-            {
-                if (auto lp = get_selected_image_layer())
-                {
-                    if (lp->x != orig_layer_x_ || lp->y != orig_layer_y_ ||
-                        lp->scale_x != orig_layer_sx_ || lp->scale_y != orig_layer_sy_)
-                    {
-                        push_command(std::make_shared<CommandScale>(
-                            lp->id,
-                            orig_layer_x_, orig_layer_y_, orig_layer_sx_, orig_layer_sy_,
-                            lp->x, lp->y, lp->scale_x, lp->scale_y));
-                    }
-                }
-            }
-            else if (drag_mode_ == DragMode::Crop)
+            drag_undo_record_ = nullptr;
+            drag_undo_state_pushed_ = false;
+
+            if (drag_mode_ == DragMode::Crop)
             {
                 int sel_idx = get_selected_layer_index();
                 if (sel_idx >= 0)
@@ -576,12 +567,15 @@ namespace mui
 
                             Point2D W = Transform::local_to_world(C_ux, C_uy, C_x, C_y,
                                                                   l.rotation_angle, l.flip_h, l.flip_v);
-                            push_command(std::make_shared<CommandCrop>(
-                                l.id,
-                                l.crop_x, l.crop_y, l.crop_w, l.crop_h,
-                                cx_c, cy_c, cw_c, ch_c,
-                                l.x, l.y,
-                                l.x + (W.x - C_ux), l.y + (W.y - C_uy)));
+                            perform_heavy_undoable_action([&]()
+                                                          {
+                                l.crop_x = cx_c;
+                                l.crop_y = cy_c;
+                                l.crop_w = cw_c;
+                                l.crop_h = ch_c;
+                                l.x += (W.x - C_ux);
+                                l.y += (W.y - C_uy);
+                            });
                         }
                     }
                 }

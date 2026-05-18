@@ -25,6 +25,30 @@ namespace mui
             view_y_ = region_y + region_h * 0.5 - h() / scale_ * 0.5;
         }
 
+        template <typename Action>
+        void perform_heavy_undoable_action(Action action)
+        {
+            push_undo_record(
+                std::make_unique<DocumentChangeRecord>(create_state_memento()));
+            action();
+            invalidate();
+            notify_view_changed();
+        }
+
+        template <typename Action>
+        void perform_light_undoable_action(const std::vector<int> &layer_indices, Action action)
+        {
+            auto record = std::make_unique<LayerPropsChangeRecord>();
+            for (int index : layer_indices)
+                if (auto l = get_image_layer(index))
+                    record->props[l->id] = l->clone();
+
+            push_undo_record(std::move(record));
+            action();
+            invalidate();
+            notify_view_changed();
+        }
+
     public:
         explicit ImageViewer(int x = 0, int y = 0, int w = 0, int h = 0,
                              const char *label = nullptr)
@@ -286,8 +310,10 @@ namespace mui
         ImageViewer &flip_layer_vertical(int index)
         {
             if (auto l = get_image_layer(index))
+            {
                 perform_light_undoable_action({index}, [l]()
                                               { l->flip_v = !l->flip_v; });
+            }
             return *this;
         }
 

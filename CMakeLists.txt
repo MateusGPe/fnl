@@ -26,6 +26,7 @@ FetchContent_Declare(
   fltk
   GIT_REPOSITORY https://github.com/fltk/fltk.git
   GIT_TAG master # Pin to a stable version for reproducibility
+  GIT_SUBMODULES ""
 )
 
 # Make dependencies available

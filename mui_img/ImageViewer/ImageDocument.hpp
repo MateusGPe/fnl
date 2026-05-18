@@ -8,8 +8,6 @@
 
 namespace mui
 {
-    class ViewerCommand;
-
     class ImageDocument
     {
     private:
@@ -34,13 +32,32 @@ namespace mui
 
     public:
         ImageDocument() = default;
+        ImageDocument(const ImageDocument &other)
+            : next_layer_id_(other.next_layer_id_),
+              mode_(other.mode_),
+              canvas_width_(other.canvas_width_),
+              canvas_height_(other.canvas_height_)
+        {
+            layers_.reserve(other.layers_.size());
+            for (const auto &layer : other.layers_)
+            {
+                if (layer)
+                    layers_.push_back(layer->clone());
+            }
+            rebuild_id_map();
+        }
+
         ~ImageDocument() = default;
 
         DocumentMode mode() const { return mode_; }
         void mode(DocumentMode m) { mode_ = m; }
         int canvas_width() const { return canvas_width_; }
         int canvas_height() const { return canvas_height_; }
-        void canvas_size(int w, int h) { canvas_width_ = w; canvas_height_ = h; }
+        void canvas_size(int w, int h)
+        {
+            canvas_width_ = w;
+            canvas_height_ = h;
+        }
 
         void add_layer(std::shared_ptr<Layer> layer)
         {

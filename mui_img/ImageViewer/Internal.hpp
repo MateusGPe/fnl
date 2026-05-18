@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Types.hpp"
-#include "Commands.hpp"
 #include "Theme.hpp"
 #include <FL/Fl.H>
 #include <FL/Fl_Widget.H>
@@ -18,6 +17,37 @@
 
 namespace mui
 {
+    class InternalImageViewer;
+
+    struct StateMemento
+    {
+        std::shared_ptr<ImageDocument> document;
+        int selected_layer_id;
+        std::unordered_set<int> selection_ids;
+    };
+
+    // --- Hybrid Undo/Redo System ---
+
+    struct UndoRecord
+    {
+        virtual ~UndoRecord() = default;
+        virtual void apply(InternalImageViewer *viewer) = 0;
+    };
+
+    struct DocumentChangeRecord : public UndoRecord
+    {
+        std::unique_ptr<StateMemento> state;
+        explicit DocumentChangeRecord(std::unique_ptr<StateMemento> s) : state(std::move(s)) {}
+        void apply(InternalImageViewer *viewer) override;
+    };
+
+    struct LayerPropsChangeRecord : public UndoRecord
+    {
+        std::unordered_map<int, std::shared_ptr<Layer>> props;
+
+        void apply(InternalImageViewer *viewer) override;
+    };
+
     struct MinimapInfo
     {
         int x, y, w, h;
@@ -64,22 +94,12 @@ namespace mui
 
     class InternalImageViewer : public Fl_Widget
     {
-        friend struct CommandMove;
-        friend struct CommandCrop;
-        friend struct CommandFlip;
-        friend struct CommandRotate;
-        friend struct CommandScale;
-        friend struct CommandDelete;
-        friend struct CommandOpacity;
-        friend struct CommandBlendMode;
-        friend struct CommandVisibility;
-        friend struct CommandLock;
-        friend struct CommandParent;
-        friend struct CommandMoveLayer;
+        friend struct DocumentChangeRecord;
+        friend struct LayerPropsChangeRecord;
 
     protected:
-        std::vector<std::shared_ptr<ViewerCommand>> undo_stack_;
-        std::vector<std::shared_ptr<ViewerCommand>> redo_stack_;
+        std::vector<std::unique_ptr<UndoRecord>> undo_stack_;
+        std::vector<std::unique_ptr<UndoRecord>> redo_stack_;
         std::shared_ptr<ImageDocument> document_;
         std::unique_ptr<ViewerToolState> active_tool_state_;
 
@@ -99,8 +119,10 @@ namespace mui
         std::unordered_set<int> selection_ids_;
 
         std::vector<std::pair<int, std::pair<double, double>>> multi_drag_origins_;
+        std::unique_ptr<LayerPropsChangeRecord> drag_undo_record_;
         DragMode drag_mode_ = DragMode::None;
         DragMode hover_mode_ = DragMode::None;
+        bool drag_undo_state_pushed_ = false;
 
         bool bilinear_filtering_ = true;
         int grid_size_;
@@ -240,34 +262,73 @@ namespace mui
             out_ly = local_pt.y;
         }
 
+        template <typename Action>
+        void perform_heavy_undoable_action(Action action)
+        {
+            push_undo_record(
+                std::make_unique<DocumentChangeRecord>(create_state_memento()));
+            action();
+            invalidate();
+            notify_view_changed();
+        }
+
+        template <typename Action>
+        void perform_light_undoable_action(const std::vector<int> &layer_indices, Action action)
+        {
+            auto record = std::make_unique<LayerPropsChangeRecord>();
+            for (int index : layer_indices)
+                if (auto l = get_image_layer(index))
+                    record->props[l->id] = l->clone();
+
+            push_undo_record(std::move(record));
+            action();
+            invalidate();
+            notify_view_changed();
+        }
+
+        std::unique_ptr<StateMemento> create_state_memento()
+        {
+            auto memento = std::make_unique<StateMemento>();
+            memento->document = std::make_shared<ImageDocument>(*document_);
+            memento->selected_layer_id = selected_layer_id_;
+            memento->selection_ids = selection_ids_;
+            return memento;
+        }
+
+        void push_undo_record(std::unique_ptr<UndoRecord> record)
+        {
+            undo_stack_.push_back(std::move(record));
+            redo_stack_.clear();
+        }
+
+        void apply_full_memento(std::unique_ptr<StateMemento> memento)
+        {
+            document_ = memento->document;
+            selected_layer_id_ = memento->selected_layer_id;
+            selection_ids_ = memento->selection_ids;
+            invalidate();
+            notify_view_changed();
+            notify_layer_selected();
+        }
+
         void undo()
         {
             if (undo_stack_.empty())
                 return;
-            auto cmd = undo_stack_.back();
+            auto record = std::move(undo_stack_.back());
             undo_stack_.pop_back();
-            cmd->undo(this);
-            redo_stack_.push_back(cmd);
-            notify_view_changed();
+            record->apply(this);
+            redo_stack_.push_back(std::move(record));
         }
 
         void redo()
         {
             if (redo_stack_.empty())
                 return;
-            auto cmd = redo_stack_.back();
+            auto record = std::move(redo_stack_.back());
             redo_stack_.pop_back();
-            cmd->execute(this);
-            undo_stack_.push_back(cmd);
-            notify_view_changed();
-        }
-
-        void push_command(std::shared_ptr<ViewerCommand> cmd)
-        {
-            cmd->execute(this);
-            undo_stack_.push_back(cmd);
-            redo_stack_.clear();
-            notify_view_changed();
+            record->apply(this);
+            undo_stack_.push_back(std::move(record));
         }
 
         bool is_layer_visible(int index) const
@@ -379,7 +440,6 @@ namespace mui
 
         void sample_color(int mx, int my, double world_x, double world_y);
         virtual void draw_background(int cx, int cy, int cw, int ch);
-        DragMode hit_test_gizmo(int mx, int my);
         void draw_handle(int hx, int hy, bool is_hovered);
         virtual void draw_overlays(int cx, int cy, int cw, int ch);
         bool hit_test_minimap(int mx, int my);
@@ -394,6 +454,8 @@ namespace mui
         int handle(int event) override;
 
     public:
+        DragMode hit_test_gizmo(int mx, int my);
+
         void add_layer(std::shared_ptr<Layer> layer)
         {
             if (document_)
@@ -415,6 +477,33 @@ namespace mui
     };
 }
 
+inline void mui::DocumentChangeRecord::apply(mui::InternalImageViewer *viewer)
+{
+    auto current_state = viewer->create_state_memento();
+    viewer->apply_full_memento(std::move(state));
+    state = std::move(current_state);
+}
+
+inline void mui::LayerPropsChangeRecord::apply(mui::InternalImageViewer *viewer)
+{
+    if (!viewer)
+        return;
+    for (auto &pair : props)
+    {
+        int layer_id = pair.first;
+        std::shared_ptr<Layer> &stored_props = pair.second;
+
+        int idx = viewer->document_->get_layer_index(layer_id);
+        if (auto target_layer = viewer->get_image_layer(idx))
+        {
+            auto current_props_clone = target_layer->clone();
+            *target_layer = *std::static_pointer_cast<ImageLayer>(stored_props);
+            stored_props = current_props_clone;
+        }
+    }
+    viewer->invalidate();
+    viewer->notify_view_changed();
+}
+
 #include "Internal_Draw.hpp"
 #include "Internal_Events.hpp"
-#include "Internal_Commands.hpp"

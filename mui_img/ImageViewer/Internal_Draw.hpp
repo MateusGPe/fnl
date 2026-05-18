@@ -2,6 +2,7 @@
 
 #include "Internal.hpp"
 #include <cmath>
+#include "PixelBlender.hpp"
 #include <algorithm>
 
 namespace mui
@@ -330,37 +331,11 @@ namespace mui
                                     double src_px = actual_crop_x + norm_x * actual_crop_w;
                                     double src_py = actual_crop_y + norm_y * actual_crop_h;
 
-                                    uchar fr, fg_g_val, fb, fa;
+                                    float fr, fg_g_val, fb, fa;
 
                                     if (bilinear_filtering_)
                                     {
-                                        int x1 = static_cast<int>(std::floor(src_px));
-                                        int y1 = static_cast<int>(std::floor(src_py));
-                                        x1 = std::clamp(x1, 0, img_w - 1);
-                                        y1 = std::clamp(y1, 0, img_h - 1);
-                                        int x2 = std::min(x1 + 1, img_w - 1);
-                                        int y2 = std::min(y1 + 1, img_h - 1);
-                                        float wx_f = static_cast<float>(src_px - x1);
-                                        float wy_f = static_cast<float>(src_py - y1);
-
-                                        int idx11 = y1 * fg_ld + x1 * fg_d;
-                                        int idx21 = y1 * fg_ld + x2 * fg_d;
-                                        int idx12 = y2 * fg_ld + x1 * fg_d;
-                                        int idx22 = y2 * fg_ld + x2 * fg_d;
-
-                                        auto bilerp = [&](int offset)
-                                        {
-                                            float c11 = fg[idx11 + offset];
-                                            float c21 = fg[idx21 + offset];
-                                            float c12 = fg[idx12 + offset];
-                                            float c22 = fg[idx22 + offset];
-                                            return (c11 * (1.0f - wx_f) + c21 * wx_f) * (1.0f - wy_f) + (c12 * (1.0f - wx_f) + c22 * wx_f) * wy_f;
-                                        };
-
-                                        fr = static_cast<uchar>(bilerp(0));
-                                        fg_g_val = static_cast<uchar>(bilerp(1));
-                                        fb = static_cast<uchar>(bilerp(2));
-                                        fa = (fg_d == 4) ? static_cast<uchar>(bilerp(3)) : 255;
+                                        PixelBlender::bilerp(fg, src_px, src_py, img_w, img_h, fg_ld, fg_d, fr, fg_g_val, fb, fa);
                                     }
                                     else
                                     {
@@ -369,40 +344,17 @@ namespace mui
                                         src_x_int = std::clamp(src_x_int, 0, img_w - 1);
                                         src_y_int = std::clamp(src_y_int, 0, img_h - 1);
 
-                                        int fg_idx = src_y_int * fg_ld + src_x_int * fg_d;
+                                        const int fg_idx = src_y_int * fg_ld + src_x_int * fg_d;
                                         fr = fg[fg_idx];
                                         fg_g_val = fg[fg_idx + 1];
                                         fb = fg[fg_idx + 2];
                                         fa = (fg_d == 4) ? fg[fg_idx + 3] : 255;
                                     }
 
-                                    float alpha = (fa / 255.0f) * layer.alpha;
+                                    const float alpha = (fa / 255.0f) * layer.alpha;
                                     if (alpha > 0.0f)
                                     {
-                                        float out_r = fr, out_g = fg_g_val, out_b = fb;
-
-                                        if (layer.blend_mode == BlendMode::Multiply)
-                                        {
-                                            out_r = (fr * br) / 255.0f;
-                                            out_g = (fg_g_val * bg_g) / 255.0f;
-                                            out_b = (fb * bb) / 255.0f;
-                                        }
-                                        else if (layer.blend_mode == BlendMode::Screen)
-                                        {
-                                            out_r = 255.0f - ((255.0f - fr) * (255.0f - br)) / 255.0f;
-                                            out_g = 255.0f - ((255.0f - fg_g_val) * (255.0f - bg_g)) / 255.0f;
-                                            out_b = 255.0f - ((255.0f - fb) * (255.0f - bb)) / 255.0f;
-                                        }
-                                        else if (layer.blend_mode == BlendMode::Overlay)
-                                        {
-                                            out_r = (br < 128) ? (2.0f * fr * br / 255.0f) : (255.0f - 2.0f * (255.0f - fr) * (255.0f - br) / 255.0f);
-                                            out_g = (bg_g < 128) ? (2.0f * fg_g_val * bg_g / 255.0f) : (255.0f - 2.0f * (255.0f - fg_g_val) * (255.0f - bg_g) / 255.0f);
-                                            out_b = (bb < 128) ? (2.0f * fb * bb / 255.0f) : (255.0f - 2.0f * (255.0f - fb) * (255.0f - bb) / 255.0f);
-                                        }
-
-                                        blended[bg_idx] = (uchar)std::clamp(out_r * alpha + br * (1.0f - alpha), 0.0f, 255.0f);
-                                        blended[bg_idx + 1] = (uchar)std::clamp(out_g * alpha + bg_g * (1.0f - alpha), 0.0f, 255.0f);
-                                        blended[bg_idx + 2] = (uchar)std::clamp(out_b * alpha + bb * (1.0f - alpha), 0.0f, 255.0f);
+                                        PixelBlender::blend_pixels(layer.blend_mode, fr, fg_g_val, fb, br, bg_g, bb, alpha, &blended[bg_idx]);
                                     }
                                 }
                             }
