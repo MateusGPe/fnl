@@ -19,6 +19,14 @@ namespace mui
 {
     class InternalImageViewer;
 
+    constexpr double MIN_WORLD_COORD = -32768.0;
+    constexpr double MAX_WORLD_COORD =  32768.0;
+
+    inline void clamp_world_coords(double &x, double &y) {
+        x = std::clamp(x, MIN_WORLD_COORD, MAX_WORLD_COORD);
+        y = std::clamp(y, MIN_WORLD_COORD, MAX_WORLD_COORD);
+    }
+
     struct StateMemento
     {
         std::shared_ptr<ImageDocument> document;

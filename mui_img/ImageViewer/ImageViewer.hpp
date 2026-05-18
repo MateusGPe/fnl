@@ -114,20 +114,27 @@ namespace mui
                     try
                     {
                         auto img = std::make_shared<Image>(filepath.c_str());
-                        auto thumb = std::make_shared<Image>(img->handle()->copy(32, 32));
-                        UILock lock;
-                        auto layer = std::make_shared<ImageLayer>(
-                            img, name, lx, ly,
-                            int(img->width()), int(img->height()),
-                            1.0, 1.0, 0.0, 1.0, BlendMode::Normal, true, false, thumb);
-                        document_->add_layer(layer);
-                        clear_selection();
-                        set_primary_selection(layer->id);
-                        invalidate();
+                        {
+                            UILock lock; // Protect FLTK image operations AND UI state
+                            auto thumb = std::make_shared<Image>(img->handle()->copy(32, 32));
+                            auto layer = std::make_shared<ImageLayer>(
+                                img, name, lx, ly,
+                                int(img->width()), int(img->height()),
+                                1.0, 1.0, 0.0, 1.0, BlendMode::Normal, true, false, thumb);
+                            document_->add_layer(layer);
+                            clear_selection();
+                            set_primary_selection(layer->id);
+                            invalidate();
+                        }
                         Dispatcher::awake<T, Method>(instance);
+                    }
+                    catch (const std::exception &e)
+                    {
+                        fprintf(stderr, "Async image load failed: %s\n", e.what());
                     }
                     catch (...)
                     {
+                        fprintf(stderr, "Async image load failed: unknown error\n");
                     }
                 })
                 .detach();
@@ -195,7 +202,7 @@ namespace mui
             if (selection_ids_.empty())
                 return *this;
             perform_heavy_undoable_action([this]()
-            {
+                                          {
                 std::vector<int> to_delete;
                 for (int id : selection_ids_)
                     if (int idx = document_->get_layer_index(id); idx >= 0)
@@ -203,8 +210,7 @@ namespace mui
                 std::sort(to_delete.rbegin(), to_delete.rend());
                 for (int idx : to_delete)
                     document_->remove_layer(idx);
-                clear_selection();
-            });
+                clear_selection(); });
             return *this;
         }
 
@@ -213,13 +219,12 @@ namespace mui
             if (index >= 0 && index < (int)document_->layer_count())
             {
                 perform_heavy_undoable_action([this, index]()
-                {
+                                              {
                     int id_to_remove = document_->get_layer(index)->id;
                     document_->remove_layer(index);
                     selection_ids_.erase(id_to_remove);
                     if (selected_layer_id_ == id_to_remove)
-                        selected_layer_id_ = selection_ids_.empty() ? -1 : *selection_ids_.begin();
-                });
+                        selected_layer_id_ = selection_ids_.empty() ? -1 : *selection_ids_.begin(); });
             }
             return *this;
         }
@@ -258,6 +263,7 @@ namespace mui
 
         ImageViewer &move_layer_to(int index, double new_x, double new_y)
         {
+            clamp_world_coords(new_x, new_y);
             if (auto l = get_image_layer(index))
             {
                 perform_light_undoable_action({index}, [l, new_x, new_y]()
@@ -268,21 +274,22 @@ namespace mui
 
         ImageViewer &move_selection_by(double dx, double dy)
         {
-            if (selection_ids_.empty()) return *this;
+            if (selection_ids_.empty())
+                return *this;
             std::vector<int> indices;
             for (int id : selection_ids_)
                 if (int idx = document_->get_layer_index(id); idx >= 0)
                     indices.push_back(idx);
 
             perform_light_undoable_action(indices, [this, dx, dy]()
-            {
+                                          {
                 for (int id : selection_ids_)
                     if (auto l = get_image_layer(document_->get_layer_index(id)))
                     {
                         l->x += dx;
                         l->y += dy;
-                    }
-            });
+                        clamp_world_coords(l->x, l->y);
+                    } });
             return *this;
         }
 
@@ -301,9 +308,7 @@ namespace mui
         {
             if (auto l = get_image_layer(index))
                 perform_light_undoable_action({index}, [l]()
-                {
-                    l->flip_h = !l->flip_h;
-                });
+                                              { l->flip_h = !l->flip_h; });
             return *this;
         }
 
@@ -360,7 +365,7 @@ namespace mui
 
             // Crop is a mix of property change and position change, so treat as heavy.
             perform_heavy_undoable_action([=]()
-            {
+                                          {
                 double ox = (l->crop_w >= 0) ? l->crop_x : 0.0;
                 double oy = (l->crop_h >= 0) ? l->crop_y : 0.0;
                 Point2D world_off = Transform::local_to_world(
@@ -371,8 +376,7 @@ namespace mui
                 l->crop_w = nw;
                 l->crop_h = nh;
                 l->x += world_off.x;
-                l->y += world_off.y;
-            });
+                l->y += world_off.y; });
             return *this;
         }
 

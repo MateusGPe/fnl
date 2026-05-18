@@ -221,6 +221,7 @@ namespace mui
                                               {
                     l->x += dx;
                     l->y += dy;
+                    clamp_world_coords(l->x, l->y);
                 });
                 return 1;
             }
@@ -413,6 +414,7 @@ namespace mui
                         {
                             lp->x = origin.first + ddx;
                             lp->y = origin.second + ddy;
+                            clamp_world_coords(lp->x, lp->y);
                         }
                     }
                 }
@@ -436,6 +438,7 @@ namespace mui
                     }
                     lp->x = target_x;
                     lp->y = target_y;
+                    clamp_world_coords(lp->x, lp->y);
                 }
                 bg_dirty_ = true;
                 last_mouse_x_ = Fl::event_x();

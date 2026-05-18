@@ -297,10 +297,11 @@ namespace mui
                 if (clip_w > 0 && clip_h > 0)
                 {
                     uchar *bg = fl_read_image(nullptr, clip_x, clip_y, clip_w, clip_h, 0);
+                    std::unique_ptr<uchar[]> bg_guard(bg); // Auto-cleanup
                     if (bg && fg)
                     {
                         size_t buffer_size = static_cast<size_t>(clip_w) * static_cast<size_t>(clip_h) * 3;
-                        uchar *blended = new uchar[buffer_size];
+                        std::unique_ptr<uchar[]> blended(new uchar[buffer_size]);
                         int fg_ld = base_img->ld() ? base_img->ld() : img_w * fg_d;
                         double actual_crop_x = (layer.crop_w >= 0) ? layer.crop_x : 0.0;
                         double actual_crop_y = (layer.crop_h >= 0) ? layer.crop_y : 0.0;
@@ -359,9 +360,7 @@ namespace mui
                                 }
                             }
                         }
-                        fl_draw_image(blended, clip_x, clip_y, clip_w, clip_h, 3);
-                        delete[] blended;
-                        delete[] bg;
+                        fl_draw_image(blended.get(), clip_x, clip_y, clip_w, clip_h, 3);
                     }
                 }
             }
@@ -456,8 +455,12 @@ namespace mui
         int world_w = std::max(1, static_cast<int>(std::round(max_x - min_x)));
         int world_h = std::max(1, static_cast<int>(std::round(max_y - min_y)));
 
-        if (world_w <= 0 || world_h <= 0)
+        // Prevent OOM and overflow crashes on excessive dimensions
+        if (world_w <= 0 || world_h <= 0 || world_w > 16384 || world_h > 16384)
+        {
+            fprintf(stderr, "Export failed: Invalid or excessively large dimensions.\n");
             return;
+        }
 
         Fl_Offscreen off = fl_create_offscreen(world_w, world_h);
         if (!off)
@@ -488,20 +491,20 @@ namespace mui
                 render_layer_to_buffer(*l, i, world_w, world_h, min_x, min_y, 1.0);
         }
 
-        uchar *pixels = fl_read_image(nullptr, 0, 0, world_w, world_h, 0);
+        uchar *pixels_raw = fl_read_image(nullptr, 0, 0, world_w, world_h, 0);
         fl_end_offscreen();
         fl_delete_offscreen(off);
 
-        if (pixels)
+        if (pixels_raw)
         {
+            std::unique_ptr<uchar[]> pixels(pixels_raw);
             FILE *fp = fopen(filepath, "wb");
             if (fp)
             {
                 fprintf(fp, "P6\n%d %d\n255\n", world_w, world_h);
-                fwrite(pixels, 1, world_w * world_h * 3, fp);
+                fwrite(pixels.get(), 1, world_w * world_h * 3, fp);
                 fclose(fp);
             }
-            delete[] pixels;
         }
     }
 }
