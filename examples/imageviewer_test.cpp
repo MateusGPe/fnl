@@ -1,4 +1,4 @@
-#include "mui_img/ImageViewer.hpp"
+#include "mui_img/AdvancedImageViewer.hpp"
 #include <FL/Fl_Double_Window.H>
 #include <FL/Fl_RGB_Image.H>
 #include <cassert>
@@ -13,7 +13,7 @@ bool approx_equal(double a, double b, double epsilon = 1e-9)
     return std::abs(a - b) < epsilon;
 }
 
-void test_add_layer(mui::ImageViewer &viewer)
+void test_add_layer(mui::AdvancedImageViewer &viewer)
 {
     std::cout << "Running: test_add_layer..." << std::endl;
     viewer.clear_layers();
@@ -34,7 +34,7 @@ void test_add_layer(mui::ImageViewer &viewer)
     std::cout << "PASSED: test_add_layer" << std::endl;
 }
 
-void test_move_layer(mui::ImageViewer &viewer)
+void test_move_layer(mui::AdvancedImageViewer &viewer)
 {
     std::cout << "Running: test_move_layer..." << std::endl;
     viewer.clear_layers();
@@ -54,7 +54,7 @@ void test_move_layer(mui::ImageViewer &viewer)
     std::cout << "PASSED: test_move_layer" << std::endl;
 }
 
-void test_undo_redo_move(mui::ImageViewer &viewer)
+void test_undo_redo_move(mui::AdvancedImageViewer &viewer)
 {
     std::cout << "Running: test_undo_redo_move..." << std::endl;
     viewer.clear_layers();
@@ -85,7 +85,7 @@ void test_undo_redo_move(mui::ImageViewer &viewer)
     std::cout << "PASSED: test_undo_redo_move" << std::endl;
 }
 
-void test_delete_layer(mui::ImageViewer &viewer)
+void test_delete_layer(mui::AdvancedImageViewer &viewer)
 {
     std::cout << "Running: test_delete_layer..." << std::endl;
     viewer.clear_layers();
@@ -105,7 +105,7 @@ void test_delete_layer(mui::ImageViewer &viewer)
     std::cout << "PASSED: test_delete_layer" << std::endl;
 }
 
-void test_undo_redo_delete(mui::ImageViewer &viewer)
+void test_undo_redo_delete(mui::AdvancedImageViewer &viewer)
 {
     std::cout << "Running: test_undo_redo_delete..." << std::endl;
     viewer.clear_layers();
@@ -134,7 +134,7 @@ void test_undo_redo_delete(mui::ImageViewer &viewer)
     std::cout << "PASSED: test_undo_redo_delete" << std::endl;
 }
 
-void test_flip_rotate(mui::ImageViewer &viewer)
+void test_flip_rotate(mui::AdvancedImageViewer &viewer)
 {
     std::cout << "Running: test_flip_rotate..." << std::endl;
     viewer.clear_layers();
@@ -168,7 +168,7 @@ void test_flip_rotate(mui::ImageViewer &viewer)
     std::cout << "PASSED: test_flip_rotate" << std::endl;
 }
 
-void test_layer_properties(mui::ImageViewer &viewer)
+void test_layer_properties(mui::AdvancedImageViewer &viewer)
 {
     std::cout << "Running: test_layer_properties..." << std::endl;
     viewer.clear_layers();
@@ -214,7 +214,7 @@ void test_layer_properties(mui::ImageViewer &viewer)
     std::cout << "PASSED: test_layer_properties" << std::endl;
 }
 
-void test_layer_grouping(mui::ImageViewer &viewer)
+void test_layer_grouping(mui::AdvancedImageViewer &viewer)
 {
     std::cout << "Running: test_layer_grouping..." << std::endl;
     viewer.clear_layers();
@@ -241,7 +241,7 @@ void test_layer_grouping(mui::ImageViewer &viewer)
     std::cout << "PASSED: test_layer_grouping" << std::endl;
 }
 
-void test_view_manipulation(mui::ImageViewer &viewer)
+void test_view_manipulation(mui::AdvancedImageViewer &viewer)
 {
     std::cout << "Running: test_view_manipulation..." << std::endl;
     viewer.clear_layers();
@@ -274,7 +274,7 @@ void test_view_manipulation(mui::ImageViewer &viewer)
     std::cout << "PASSED: test_view_manipulation" << std::endl;
 }
 
-void test_crop(mui::ImageViewer &viewer)
+void test_crop(mui::AdvancedImageViewer &viewer)
 {
     std::cout << "Running: test_crop..." << std::endl;
     viewer.clear_layers();
@@ -322,7 +322,7 @@ void test_crop(mui::ImageViewer &viewer)
     std::cout << "PASSED: test_crop" << std::endl;
 }
 
-void test_layer_management(mui::ImageViewer &viewer)
+void test_layer_management(mui::AdvancedImageViewer &viewer)
 {
     std::cout << "Running: test_layer_management..." << std::endl;
     viewer.clear_layers();
@@ -383,7 +383,7 @@ void test_layer_management(mui::ImageViewer &viewer)
     std::cout << "PASSED: test_layer_management" << std::endl;
 }
 
-void test_multi_selection(mui::ImageViewer &viewer)
+void test_multi_selection(mui::AdvancedImageViewer &viewer)
 {
     std::cout << "Running: test_multi_selection..." << std::endl;
     viewer.clear_layers();
@@ -442,7 +442,7 @@ int main(int, char **)
 {
     // We need a window for FLTK to be happy, but we don't need to show it.
     auto *win = new Fl_Double_Window(100, 100, "Test Window");
-    auto *viewer = new mui::ImageViewer(0, 0, 100, 100);
+    auto *viewer = new mui::AdvancedImageViewer(0, 0, 100, 100);
     win->end();
 
     try

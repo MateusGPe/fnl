@@ -11,6 +11,7 @@
 #include <cmath>
 #include <algorithm>
 #include <cstdio>
+#include <deque>
 #include "ImageDocument.hpp"
 #include "Tools/ViewerToolState.hpp"
 #include "Transform.hpp"
@@ -106,8 +107,9 @@ namespace mui
         friend struct LayerPropsChangeRecord;
 
     protected:
-        std::vector<std::unique_ptr<UndoRecord>> undo_stack_;
+        std::deque<std::unique_ptr<UndoRecord>> undo_stack_;
         std::vector<std::unique_ptr<UndoRecord>> redo_stack_;
+        size_t max_undo_records_ = 100; // Cap to prevent memory leaks
         std::shared_ptr<ImageDocument> document_;
         std::unique_ptr<ViewerToolState> active_tool_state_;
 
@@ -306,6 +308,10 @@ namespace mui
         void push_undo_record(std::unique_ptr<UndoRecord> record)
         {
             undo_stack_.push_back(std::move(record));
+            while (undo_stack_.size() > max_undo_records_)
+            {
+                undo_stack_.pop_front();
+            }
             redo_stack_.clear();
         }
 

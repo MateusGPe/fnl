@@ -5,6 +5,8 @@
 #include <mui.hpp>
 #include <mui/Theme/data.hpp>
 #include "mui_img/ImageViewer.hpp"
+#include "mui_img/AdvancedImageViewer.hpp"
+
 #include <FL/Fl_Menu_Bar.H>
 #include <FL/Fl_Box.H>
 #include <FL/Fl_Output.H>
@@ -27,7 +29,7 @@ class ImageViewerApp
 {
 private:
     Fl_Double_Window *m_win = nullptr;
-    mui::ImageViewer *m_viewer = nullptr;
+    mui::AdvancedImageViewer *m_viewer = nullptr;
     LayerBrowser *m_layer_list = nullptr;
     Fl_Output *m_status_zoom_handle = nullptr;
     Fl_Output *m_status_coords_handle = nullptr;
@@ -544,7 +546,7 @@ public:
         m_win = new Fl_Double_Window(1200, 800, "MUI Image Compositor");
         m_win->begin();
 
-        m_viewer = new mui::ImageViewer(300, 30, 900, 745);
+        m_viewer = new mui::AdvancedImageViewer(300, 30, 900, 745);
         m_viewer->on_view_change<ImageViewerApp, &ImageViewerApp::update_status_bar>(this);
         m_viewer->on_layer_select<ImageViewerApp, &ImageViewerApp::on_canvas_select>(this);
         m_viewer->on_right_click<ImageViewerApp, &ImageViewerApp::on_context_menu>(this);

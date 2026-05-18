@@ -169,10 +169,8 @@ namespace mui
         // ---------------------------------------------------------------
         case FL_KEYBOARD:
         {
-            int sel_idx = get_selected_layer_index();
-            auto l = get_image_layer(sel_idx);
-            if (!l || l->locked)
-                break;
+            if (selection_ids_.empty())
+                return 0;
 
             int key = Fl::event_key();
 
@@ -217,11 +215,22 @@ namespace mui
             }
             if (dx != 0.0 || dy != 0.0)
             {
-                perform_light_undoable_action({sel_idx}, [l, dx, dy]()
-                                              {
-                    l->x += dx;
-                    l->y += dy;
-                    clamp_world_coords(l->x, l->y);
+                std::vector<int> indices;
+                for (int id : selection_ids_)
+                    if (int idx = document_->get_layer_index(id); idx >= 0)
+                        indices.push_back(idx);
+
+                perform_light_undoable_action(indices, [this, dx, dy]()
+                {
+                    for (int id : selection_ids_) {
+                        int idx = document_->get_layer_index(id);
+                        auto lp = get_image_layer(idx);
+                        if (lp && !lp->locked) {
+                            lp->x += dx;
+                            lp->y += dy;
+                            clamp_world_coords(lp->x, lp->y);
+                        }
+                    }
                 });
                 return 1;
             }
@@ -473,9 +482,11 @@ namespace mui
             if (is_scale_mode(drag_mode_) && get_selected_image_layer())
             {
                 auto &l = *get_selected_image_layer();
+                double base_w = (l.crop_w >= 0) ? l.crop_w : l.original_w;
+                double base_h = (l.crop_h >= 0) ? l.crop_h : l.original_h;
                 Rect2D b = l.get_effective_bounds();
-                double orig_draw_w = b.w * orig_layer_sx_ / l.scale_x;
-                double orig_draw_h = b.h * orig_layer_sy_ / l.scale_y;
+                double orig_draw_w = base_w * orig_layer_sx_;
+                double orig_draw_h = base_h * orig_layer_sy_;
                 double hw = orig_draw_w * 0.5, hh = orig_draw_h * 0.5;
 
                 double fx = (drag_mode_ == DragMode::ScaleTL || drag_mode_ == DragMode::ScaleBL) ? hw : -hw;
@@ -494,8 +505,8 @@ namespace mui
                 double new_w = std::max(5.0 / scale_, (drag_loc.x - w_fixed.x) * d_x);
                 double new_h = std::max(5.0 / scale_, (drag_loc.y - w_fixed.y) * d_y);
 
-                l.scale_x = new_w / (b.w / l.scale_x);
-                l.scale_y = new_h / (b.h / l.scale_y);
+                l.scale_x = new_w / base_w;
+                l.scale_y = new_h / base_h;
 
                 double nfx = (drag_mode_ == DragMode::ScaleTL || drag_mode_ == DragMode::ScaleBL) ? new_w / 2 : -new_w / 2;
                 double nfy = (drag_mode_ == DragMode::ScaleTL || drag_mode_ == DragMode::ScaleTR) ? new_h / 2 : -new_h / 2;
@@ -525,9 +536,6 @@ namespace mui
         {
             if (drag_undo_state_pushed_ && drag_undo_record_)
             {
-                // Finalize the lightweight undo record by swapping its state
-                // with the final state of the layers.
-                drag_undo_record_->apply(this);
                 push_undo_record(std::move(drag_undo_record_));
             }
             drag_undo_record_ = nullptr;
@@ -594,12 +602,20 @@ namespace mui
         // ---------------------------------------------------------------
         case FL_MOUSEWHEEL:
         {
+            if (Fl::event_dy() == 0)
+                return 0; // Ignore pure horizontal scrolls or zero-delta events
+
             double old_scale = scale_;
             double mouse_wx = view_x_ + (Fl::event_x() - x()) / old_scale;
             double mouse_wy = view_y_ + (Fl::event_y() - y()) / old_scale;
 
-            scale_ *= (Fl::event_dy() > 0) ? 0.8 : 1.25;
+            // Support high-frequency fractional trackpad events instead of fixed 25% jumps
+            scale_ *= std::pow(1.25, -Fl::event_dy());
             scale_ = std::clamp(scale_, 0.01, 100.0);
+
+            // Prevent layout micro-jitters and unnecessary redraws if hitting the limit
+            if (scale_ == old_scale)
+                return 1;
 
             view_x_ = mouse_wx - (Fl::event_x() - x()) / scale_;
             view_y_ = mouse_wy - (Fl::event_y() - y()) / scale_;
