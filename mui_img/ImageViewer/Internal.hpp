@@ -186,30 +186,39 @@ namespace mui
                     multi_drag_origins_[id] = {l->x, l->y, l->scale_x, l->scale_y, l->rotation_angle};
         }
 
-        // Helper struct to abstract crop drags 
-        struct CropDragBox {
+        // Helper struct to abstract crop drags
+        struct CropDragBox
+        {
             double min_lx, min_ly, max_lx, max_ly;
             double w() const { return max_lx - min_lx; }
             double h() const { return max_ly - min_ly; }
         };
 
-        CropDragBox get_crop_drag_box() const {
+        CropDragBox get_crop_drag_box() const
+        {
             double min_lx, min_ly, max_lx, max_ly;
-            if (Fl::event_state(FL_CTRL)) {
+            if (Fl::event_state(FL_CTRL))
+            {
                 double dx = std::abs(crop_end_x_ - crop_start_x_);
                 double dy = std::abs(crop_end_y_ - crop_start_y_);
-                min_lx = crop_start_x_ - dx; min_ly = crop_start_y_ - dy;
-                max_lx = crop_start_x_ + dx; max_ly = crop_start_y_ + dy;
-            } else {
-                min_lx = std::min(crop_start_x_, crop_end_x_); min_ly = std::min(crop_start_y_, crop_end_y_);
-                max_lx = std::max(crop_start_x_, crop_end_x_); max_ly = std::max(crop_start_y_, crop_end_y_);
+                min_lx = crop_start_x_ - dx;
+                min_ly = crop_start_y_ - dy;
+                max_lx = crop_start_x_ + dx;
+                max_ly = crop_start_y_ + dy;
+            }
+            else
+            {
+                min_lx = std::min(crop_start_x_, crop_end_x_);
+                min_ly = std::min(crop_start_y_, crop_end_y_);
+                max_lx = std::max(crop_start_x_, crop_end_x_);
+                max_ly = std::max(crop_start_y_, crop_end_y_);
             }
             return {min_lx, min_ly, max_lx, max_ly};
         }
 
         // Extracted Drawing Methods
         void draw_snap_lines();
-        void draw_selection_gizmo(const ImageLayer& l, bool is_primary);
+        void draw_selection_gizmo(const ImageLayer &l, bool is_primary);
         void draw_crop_gizmo();
 
         // Extracted Event Handlers
@@ -217,7 +226,7 @@ namespace mui
         int handle_mouse_push();
         int handle_mouse_drag();
         int handle_mouse_release();
-        void apply_snapping(double& final_ddx, double& final_ddy, const Rect2D& target_bounds);
+        void apply_snapping(double &final_ddx, double &final_ddy, const Rect2D &target_bounds);
         void handle_scale_drag(double world_x, double world_y);
         void handle_rotate_drag(double world_x, double world_y);
 

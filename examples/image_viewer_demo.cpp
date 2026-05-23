@@ -101,6 +101,11 @@ public:
         m_viewer->fit_to_canvas();
     }
 
+    void on_fit_layers_to_canvas()
+    {
+        m_viewer->fit_layers_to_canvas();
+    }
+
     void on_export_json()
     {
         mui::NativeFileChooser chooser(mui::NativeFileChooser::SaveFile);
@@ -689,6 +694,8 @@ public:
                       { static_cast<ImageViewerApp *>(v)->on_toggle_grid(); }, this);
         menu_bar->add("View/Fit All", FL_CTRL + 'f', [](Fl_Widget *, void *v)
                       { static_cast<ImageViewerApp *>(v)->on_fit_all(); }, this);
+        menu_bar->add("View/Fit Layers to Canvas", FL_CTRL + FL_SHIFT + 'F', [](Fl_Widget *, void *v)
+                      { static_cast<ImageViewerApp *>(v)->on_fit_layers_to_canvas(); }, this);
         menu_bar->add("View/Toggle Minimap", FL_CTRL + 'm', [](Fl_Widget *, void *v)
                       { static_cast<ImageViewerApp *>(v)->on_toggle_minimap(); }, this);
 

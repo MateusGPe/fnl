@@ -9,25 +9,28 @@ namespace mui
 {
     struct SnapCandidate
     {
-        double delta;      
-        double line_coord; 
-        double line_start; 
-        double line_end;   
+        double delta;
+        double line_coord;
+        double line_start;
+        double line_end;
         bool is_grid_snap = false;
     };
 
     inline DragMode InternalImageViewer::hit_test_gizmo(int mx, int my)
     {
         auto l_ptr = get_selected_image_layer();
-        if (!l_ptr || l_ptr->locked) return DragMode::None;
-        
+        if (!l_ptr || l_ptr->locked)
+            return DragMode::None;
+
         double wx, wy;
         mouse_to_world(mx, my, wx, wy);
-        
-        double r_world = (ThemeManager::get_palette().metrics.imageviewer_handle_size * 0.5 +
-                          ThemeManager::get_palette().metrics.imageviewer_handle_hit_padding) / scale_;
 
-        auto near = [&](const Point2D& p) {
+        double r_world = (ThemeManager::get_palette().metrics.imageviewer_handle_size * 0.5 +
+                          ThemeManager::get_palette().metrics.imageviewer_handle_hit_padding) /
+                         scale_;
+
+        auto near = [&](const Point2D &p)
+        {
             return std::abs(wx - p.x) <= r_world && std::abs(wy - p.y) <= r_world;
         };
 
@@ -35,18 +38,24 @@ namespace mui
         double rot_offset = (ThemeManager::get_palette().metrics.imageviewer_handle_size * 2) / scale_;
         auto gizmo = Transform::get_gizmo_handles(*l_ptr, rot_offset);
 
-        if (near(gizmo.corners[0])) return DragMode::ScaleTL;
-        if (near(gizmo.corners[1])) return DragMode::ScaleTR;
-        if (near(gizmo.corners[2])) return DragMode::ScaleBR;
-        if (near(gizmo.corners[3])) return DragMode::ScaleBL;
-        if (near(gizmo.rot_handle)) return DragMode::Rotate;
+        if (near(gizmo.corners[0]))
+            return DragMode::ScaleTL;
+        if (near(gizmo.corners[1]))
+            return DragMode::ScaleTR;
+        if (near(gizmo.corners[2]))
+            return DragMode::ScaleBR;
+        if (near(gizmo.corners[3]))
+            return DragMode::ScaleBL;
+        if (near(gizmo.rot_handle))
+            return DragMode::Rotate;
 
         return DragMode::None;
     }
 
     inline bool InternalImageViewer::hit_test_minimap(int mx, int my)
     {
-        if (!show_minimap_) return false;
+        if (!show_minimap_)
+            return false;
         int mm_x = x() + w() - minimap_size_ - minimap_margin_;
         int mm_y = y() + minimap_margin_;
         return mx >= mm_x && mx <= mm_x + minimap_size_ &&
@@ -67,9 +76,11 @@ namespace mui
     {
         for (int i = static_cast<int>(state_->document()->layer_count()) - 1; i >= 0; --i)
         {
-            if (!is_layer_visible(i)) continue;
+            if (!is_layer_visible(i))
+                continue;
             auto l_ptr = get_image_layer(i);
-            if (!l_ptr) continue;
+            if (!l_ptr)
+                continue;
             const auto &l = *l_ptr;
 
             Rect2D b = layer_effective_rect(l);
@@ -85,7 +96,8 @@ namespace mui
 
     inline void InternalImageViewer::sample_color(int mx, int my, double world_x, double world_y)
     {
-        if (!color_picked_thunk_ || !user_data_) return;
+        if (!color_picked_thunk_ || !user_data_)
+            return;
 
         if (auto l = get_selected_image_layer())
         {
@@ -128,28 +140,33 @@ namespace mui
 
     inline int InternalImageViewer::handle_keydown(int key)
     {
-        if (state_->selection_ids().empty()) return 0;
+        if (state_->selection_ids().empty())
+            return 0;
 
         if (key == FL_Delete || key == FL_BackSpace)
         {
-            perform_heavy_undoable_action([this]() {
+            perform_heavy_undoable_action([this]()
+                                          {
                 std::vector<int> to_delete;
                 for (int id : state_->selection_ids())
                     if (int idx = state_->document()->get_layer_index(id); idx >= 0)
                         to_delete.push_back(idx);
                 std::sort(to_delete.rbegin(), to_delete.rend());
                 for (int idx : to_delete) state_->document()->remove_layer(idx);
-                state_->clear_selection(); 
-            });
+                state_->clear_selection(); });
             return 1;
         }
 
         double nudge = Fl::event_state(FL_SHIFT) ? 10.0 : 1.0;
         double dx = 0.0, dy = 0.0;
-        if (key == FL_Left) dx = -nudge / scale_;
-        else if (key == FL_Right) dx = nudge / scale_;
-        else if (key == FL_Up) dy = -nudge / scale_;
-        else if (key == FL_Down) dy = nudge / scale_;
+        if (key == FL_Left)
+            dx = -nudge / scale_;
+        else if (key == FL_Right)
+            dx = nudge / scale_;
+        else if (key == FL_Up)
+            dy = -nudge / scale_;
+        else if (key == FL_Down)
+            dy = nudge / scale_;
 
         if (dx != 0.0 || dy != 0.0)
         {
@@ -158,7 +175,8 @@ namespace mui
                 if (int idx = state_->document()->get_layer_index(id); idx >= 0)
                     indices.push_back(idx);
 
-            perform_light_undoable_action(indices, [this, dx, dy]() {
+            perform_light_undoable_action(indices, [this, dx, dy]()
+                                          {
                 for (int id : state_->selection_ids()) {
                     int idx = state_->document()->get_layer_index(id);
                     if (auto lp = get_image_layer(idx); lp && !lp->locked) {
@@ -166,8 +184,7 @@ namespace mui
                         lp->y += dy;
                         clamp_world_coords(lp->x, lp->y);
                     }
-                } 
-            });
+                } });
             return 1;
         }
         return 0;
@@ -228,7 +245,11 @@ namespace mui
                 }
             }
 
-            if (active_tool_ == ViewerTool::Pan) { drag_mode_ = DragMode::Pan; return 1; }
+            if (active_tool_ == ViewerTool::Pan)
+            {
+                drag_mode_ = DragMode::Pan;
+                return 1;
+            }
 
             if (active_tool_ == ViewerTool::Crop)
             {
@@ -257,15 +278,18 @@ namespace mui
             if (hit_idx >= 0)
             {
                 int hit_id = state_->document()->get_layer(hit_idx)->id;
-                if (ctrl) state_->toggle_selection(hit_id);
+                if (ctrl)
+                    state_->toggle_selection(hit_id);
                 else if (!state_->is_in_selection(hit_id))
                 {
                     state_->clear_selection();
                     state_->set_primary_selection(hit_id);
                 }
-                else state_->set_primary_selection(hit_id);
+                else
+                    state_->set_primary_selection(hit_id);
             }
-            else if (!ctrl) state_->clear_selection();
+            else if (!ctrl)
+                state_->clear_selection();
 
             if (auto lp = get_selected_image_layer(); lp && !lp->locked)
             {
@@ -281,7 +305,7 @@ namespace mui
         return 0;
     }
 
-    inline void InternalImageViewer::apply_snapping(double& final_ddx, double& final_ddy, const Rect2D& target_bounds)
+    inline void InternalImageViewer::apply_snapping(double &final_ddx, double &final_ddy, const Rect2D &target_bounds)
     {
         std::vector<SnapCandidate> x_snaps, y_snaps;
         const double SNAP_DIST = 10.0 / scale_;
@@ -289,7 +313,8 @@ namespace mui
         for (size_t i = 0; i < state_->document()->layer_count(); ++i)
         {
             auto other_layer = get_image_layer(i);
-            if (!other_layer || state_->is_in_selection(other_layer->id) || !is_layer_visible(i)) continue;
+            if (!other_layer || state_->is_in_selection(other_layer->id) || !is_layer_visible(i))
+                continue;
 
             Rect2D other_bounds = get_layer_world_bounds(*other_layer);
             double line_y_start = std::min(target_bounds.y, other_bounds.y);
@@ -299,26 +324,34 @@ namespace mui
 
             double h_coords[] = {target_bounds.x, target_bounds.x + target_bounds.w / 2, target_bounds.x + target_bounds.w};
             double other_h_coords[] = {other_bounds.x, other_bounds.x + other_bounds.w / 2, other_bounds.x + other_bounds.w};
-            for (double hc : h_coords) for (double ohc : other_h_coords)
-                if (std::abs(hc - ohc) < SNAP_DIST) x_snaps.push_back({ohc - hc, ohc, line_y_start, line_y_end, false});
+            for (double hc : h_coords)
+                for (double ohc : other_h_coords)
+                    if (std::abs(hc - ohc) < SNAP_DIST)
+                        x_snaps.push_back({ohc - hc, ohc, line_y_start, line_y_end, false});
 
             double v_coords[] = {target_bounds.y, target_bounds.y + target_bounds.h / 2, target_bounds.y + target_bounds.h};
             double other_v_coords[] = {other_bounds.y, other_bounds.y + other_bounds.h / 2, other_bounds.y + other_bounds.h};
-            for (double vc : v_coords) for (double ovc : other_v_coords)
-                if (std::abs(vc - ovc) < SNAP_DIST) y_snaps.push_back({ovc - vc, ovc, line_x_start, line_x_end, false});
+            for (double vc : v_coords)
+                for (double ovc : other_v_coords)
+                    if (std::abs(vc - ovc) < SNAP_DIST)
+                        y_snaps.push_back({ovc - vc, ovc, line_x_start, line_x_end, false});
         }
 
         if (!use_solid_bg_ && grid_size_ > 0)
         {
             double h_coords[] = {target_bounds.x, target_bounds.x + target_bounds.w / 2, target_bounds.x + target_bounds.w};
-            for (double hc : h_coords) {
+            for (double hc : h_coords)
+            {
                 double grid_line = std::round(hc / grid_size_) * grid_size_;
-                if (std::abs(hc - grid_line) < SNAP_DIST) x_snaps.push_back({grid_line - hc, grid_line, target_bounds.y, target_bounds.y + target_bounds.h, true});
+                if (std::abs(hc - grid_line) < SNAP_DIST)
+                    x_snaps.push_back({grid_line - hc, grid_line, target_bounds.y, target_bounds.y + target_bounds.h, true});
             }
             double v_coords[] = {target_bounds.y, target_bounds.y + target_bounds.h / 2, target_bounds.y + target_bounds.h};
-            for (double vc : v_coords) {
+            for (double vc : v_coords)
+            {
                 double grid_line = std::round(vc / grid_size_) * grid_size_;
-                if (std::abs(vc - grid_line) < SNAP_DIST) y_snaps.push_back({grid_line - vc, grid_line, target_bounds.x, target_bounds.x + target_bounds.w, true});
+                if (std::abs(vc - grid_line) < SNAP_DIST)
+                    y_snaps.push_back({grid_line - vc, grid_line, target_bounds.x, target_bounds.x + target_bounds.w, true});
             }
         }
 
@@ -328,37 +361,53 @@ namespace mui
             const double canvas_h = state_->document()->canvas_height();
             double canvas_h_coords[] = {0, canvas_w / 2, canvas_w};
             double h_coords[] = {target_bounds.x, target_bounds.x + target_bounds.w / 2, target_bounds.x + target_bounds.w};
-            for (double hc : h_coords) for (double chc : canvas_h_coords)
-                if (std::abs(hc - chc) < SNAP_DIST) x_snaps.push_back({chc - hc, chc, 0, canvas_h, false});
+            for (double hc : h_coords)
+                for (double chc : canvas_h_coords)
+                    if (std::abs(hc - chc) < SNAP_DIST)
+                        x_snaps.push_back({chc - hc, chc, 0, canvas_h, false});
 
             double canvas_v_coords[] = {0, canvas_h / 2, canvas_h};
             double v_coords[] = {target_bounds.y, target_bounds.y + target_bounds.h / 2, target_bounds.y + target_bounds.h};
-            for (double vc : v_coords) for (double cvc : canvas_v_coords)
-                if (std::abs(vc - cvc) < SNAP_DIST) y_snaps.push_back({cvc - vc, cvc, 0, canvas_w, false});
+            for (double vc : v_coords)
+                for (double cvc : canvas_v_coords)
+                    if (std::abs(vc - cvc) < SNAP_DIST)
+                        y_snaps.push_back({cvc - vc, cvc, 0, canvas_w, false});
         }
 
         if (!x_snaps.empty())
         {
-            const auto best_snap = *std::min_element(x_snaps.begin(), x_snaps.end(), [](const auto &a, const auto &b){ return std::abs(a.delta) < std::abs(b.delta); });
+            const auto best_snap = *std::min_element(x_snaps.begin(), x_snaps.end(), [](const auto &a, const auto &b)
+                                                     { return std::abs(a.delta) < std::abs(b.delta); });
             final_ddx += best_snap.delta;
-            for (const auto &snap : x_snaps) if (std::abs(snap.delta - best_snap.delta) < 1e-6)
-            {
-                double start = snap.line_start, end = snap.line_end;
-                if (snap.is_grid_snap) { start = view_y_; end = view_y_ + h() / scale_; }
-                snap_lines_.push_back({{snap.line_coord, start}, {snap.line_coord, end}});
-            }
+            for (const auto &snap : x_snaps)
+                if (std::abs(snap.delta - best_snap.delta) < 1e-6)
+                {
+                    double start = snap.line_start, end = snap.line_end;
+                    if (snap.is_grid_snap)
+                    {
+                        start = view_y_;
+                        end = view_y_ + h() / scale_;
+                    }
+                    snap_lines_.push_back({{snap.line_coord, start}, {snap.line_coord, end}});
+                }
         }
 
         if (!y_snaps.empty())
         {
-            const auto best_snap = *std::min_element(y_snaps.begin(), y_snaps.end(), [](const auto &a, const auto &b){ return std::abs(a.delta) < std::abs(b.delta); });
+            const auto best_snap = *std::min_element(y_snaps.begin(), y_snaps.end(), [](const auto &a, const auto &b)
+                                                     { return std::abs(a.delta) < std::abs(b.delta); });
             final_ddy += best_snap.delta;
-            for (const auto &snap : y_snaps) if (std::abs(snap.delta - best_snap.delta) < 1e-6)
-            {
-                double start = snap.line_start, end = snap.line_end;
-                if (snap.is_grid_snap) { start = view_x_; end = view_x_ + w() / scale_; }
-                snap_lines_.push_back({{start, snap.line_coord}, {end, snap.line_coord}});
-            }
+            for (const auto &snap : y_snaps)
+                if (std::abs(snap.delta - best_snap.delta) < 1e-6)
+                {
+                    double start = snap.line_start, end = snap.line_end;
+                    if (snap.is_grid_snap)
+                    {
+                        start = view_x_;
+                        end = view_x_ + w() / scale_;
+                    }
+                    snap_lines_.push_back({{start, snap.line_coord}, {end, snap.line_coord}});
+                }
         }
     }
 
@@ -367,15 +416,29 @@ namespace mui
         bool proportional = Fl::event_state(FL_SHIFT);
         Point2D fixed_point;
 
-        if (Fl::event_state(FL_CTRL)) {
+        if (Fl::event_state(FL_CTRL))
+        {
             fixed_point = Transform::get_bounds_center(orig_group_bounds_);
-        } else {
-            switch(drag_mode_) {
-                case DragMode::ScaleTL: fixed_point = {orig_group_bounds_.x + orig_group_bounds_.w, orig_group_bounds_.y + orig_group_bounds_.h}; break;
-                case DragMode::ScaleTR: fixed_point = {orig_group_bounds_.x, orig_group_bounds_.y + orig_group_bounds_.h}; break;
-                case DragMode::ScaleBL: fixed_point = {orig_group_bounds_.x + orig_group_bounds_.w, orig_group_bounds_.y}; break;
-                case DragMode::ScaleBR: fixed_point = {orig_group_bounds_.x, orig_group_bounds_.y}; break;
-                default: fixed_point = Transform::get_bounds_center(orig_group_bounds_); break;
+        }
+        else
+        {
+            switch (drag_mode_)
+            {
+            case DragMode::ScaleTL:
+                fixed_point = {orig_group_bounds_.x + orig_group_bounds_.w, orig_group_bounds_.y + orig_group_bounds_.h};
+                break;
+            case DragMode::ScaleTR:
+                fixed_point = {orig_group_bounds_.x, orig_group_bounds_.y + orig_group_bounds_.h};
+                break;
+            case DragMode::ScaleBL:
+                fixed_point = {orig_group_bounds_.x + orig_group_bounds_.w, orig_group_bounds_.y};
+                break;
+            case DragMode::ScaleBR:
+                fixed_point = {orig_group_bounds_.x, orig_group_bounds_.y};
+                break;
+            default:
+                fixed_point = Transform::get_bounds_center(orig_group_bounds_);
+                break;
             }
         }
 
@@ -385,8 +448,10 @@ namespace mui
         if (proportional && orig_group_bounds_.h > 1e-6)
         {
             double group_aspect = orig_group_bounds_.w / orig_group_bounds_.h;
-            if (new_group_w / group_aspect > new_group_h) new_group_h = new_group_w / group_aspect;
-            else new_group_w = new_group_h * group_aspect;
+            if (new_group_w / group_aspect > new_group_h)
+                new_group_h = new_group_w / group_aspect;
+            else
+                new_group_w = new_group_h * group_aspect;
         }
 
         double scale_factor_x = (orig_group_bounds_.w > 1e-6) ? new_group_w / orig_group_bounds_.w : 1.0;
@@ -411,17 +476,18 @@ namespace mui
         double current_angle = atan2(world_y - group_drag_center_.y, world_x - group_drag_center_.x) * 180.0 / M_PI;
         double angle_delta = current_angle - start_angle;
 
+        const bool clip_angle = Fl::event_state(FL_CTRL);
+
         if (Fl::event_state(FL_SHIFT))
             angle_delta = std::round(angle_delta / 15.0) * 15.0;
+        else if (clip_angle)
+            angle_delta = std::round(angle_delta / 45.0) * 45.0;
 
         for (auto const &[id, origin] : multi_drag_origins_)
         {
             if (auto l = get_image_layer(state_->document()->get_layer_index(id)))
             {
-                Point2D new_pos = Transform::rotate_point(origin.x, origin.y, group_drag_center_.x, group_drag_center_.y, angle_delta);
-                l->x = new_pos.x;
-                l->y = new_pos.y;
-                l->rotation_angle = origin.rot + angle_delta;
+                l->rotation_angle = (clip_angle ? 0 : origin.rot) + angle_delta;
             }
         }
         invalidate();
@@ -440,11 +506,13 @@ namespace mui
             for (int id : state_->selection_ids())
                 if (int idx = state_->document()->get_layer_index(id); idx >= 0)
                     indices.push_back(idx);
-            if (!indices.empty()) drag_undo_record_ = std::make_unique<LayerPropsCommand>(*state_, indices);
+            if (!indices.empty())
+                drag_undo_record_ = std::make_unique<LayerPropsCommand>(*state_, indices);
             drag_undo_state_pushed_ = true;
         }
 
-        if (drag_mode_ == DragMode::MinimapPan) pan_minimap_to(Fl::event_x(), Fl::event_y());
+        if (drag_mode_ == DragMode::MinimapPan)
+            pan_minimap_to(Fl::event_x(), Fl::event_y());
         else if (drag_mode_ == DragMode::MoveLayer)
         {
             snap_lines_.clear();
@@ -453,7 +521,10 @@ namespace mui
 
             if (Fl::event_state(FL_SHIFT))
             {
-                if (std::abs(ddx) > std::abs(ddy)) ddy = 0; else ddx = 0;
+                if (std::abs(ddx) > std::abs(ddy))
+                    ddy = 0;
+                else
+                    ddx = 0;
             }
 
             double final_ddx = ddx;
@@ -486,19 +557,25 @@ namespace mui
                 double cdx = local_wx - crop_start_x_;
                 double cdy = local_wy - crop_start_y_;
 
-                if (proportional) {
+                if (proportional)
+                {
                     double side = std::max(std::abs(cdx), std::abs(cdy));
                     crop_end_x_ = crop_start_x_ + side * (cdx > 0 ? 1 : -1);
                     crop_end_y_ = crop_start_y_ + side * (cdy > 0 ? 1 : -1);
-                } else {
+                }
+                else
+                {
                     crop_end_x_ = local_wx;
                     crop_end_y_ = local_wy;
                 }
             }
         }
-        else if (drag_mode_ == DragMode::Eyedropper) sample_color(Fl::event_x() - x(), Fl::event_y() - y(), world_x, world_y);
-        else if (is_scale_mode(drag_mode_) && !multi_drag_origins_.empty()) handle_scale_drag(world_x, world_y);
-        else if (drag_mode_ == DragMode::Rotate && !multi_drag_origins_.empty()) handle_rotate_drag(world_x, world_y);
+        else if (drag_mode_ == DragMode::Eyedropper)
+            sample_color(Fl::event_x() - x(), Fl::event_y() - y(), world_x, world_y);
+        else if (is_scale_mode(drag_mode_) && !multi_drag_origins_.empty())
+            handle_scale_drag(world_x, world_y);
+        else if (drag_mode_ == DragMode::Rotate && !multi_drag_origins_.empty())
+            handle_rotate_drag(world_x, world_y);
         else if (drag_mode_ == DragMode::Pan || Fl::event_state(FL_MIDDLE_MOUSE))
         {
             view_x_ -= dx / scale_;
@@ -523,7 +600,11 @@ namespace mui
         drag_undo_record_ = nullptr;
         drag_undo_state_pushed_ = false;
 
-        if (!snap_lines_.empty()) { snap_lines_.clear(); redraw(); }
+        if (!snap_lines_.empty())
+        {
+            snap_lines_.clear();
+            redraw();
+        }
 
         if (drag_mode_ == DragMode::Crop)
         {
@@ -547,12 +628,12 @@ namespace mui
                         double C_uy = l.y + cy_c * l.scale_y + (ch_c * l.scale_y) * 0.5;
 
                         Point2D W = Transform::local_to_world(C_ux, C_uy, C.x, C.y, l.rotation_angle, l.flip_h, l.flip_v);
-                        perform_heavy_undoable_action([&]() {
+                        perform_heavy_undoable_action([&]()
+                                                      {
                             l.crop_x = cx_c; l.crop_y = cy_c;
                             l.crop_w = cw_c; l.crop_h = ch_c;
                             l.x += (W.x - C_ux);
-                            l.y += (W.y - C_uy);
-                        });
+                            l.y += (W.y - C_uy); });
                     }
                 }
             }
@@ -575,52 +656,79 @@ namespace mui
             int res = 0;
             switch (event)
             {
-            case FL_PUSH: res = active_tool_state_->on_mouse_down(e); break;
-            case FL_DRAG: res = active_tool_state_->on_mouse_drag(e, Fl::event_dx(), Fl::event_dy()); break;
-            case FL_RELEASE: res = active_tool_state_->on_mouse_up(e); break;
-            case FL_KEYBOARD: res = active_tool_state_->on_key_press(this, Fl::event_key()); break;
+            case FL_PUSH:
+                res = active_tool_state_->on_mouse_down(e);
+                break;
+            case FL_DRAG:
+                res = active_tool_state_->on_mouse_drag(e, Fl::event_dx(), Fl::event_dy());
+                break;
+            case FL_RELEASE:
+                res = active_tool_state_->on_mouse_up(e);
+                break;
+            case FL_KEYBOARD:
+                res = active_tool_state_->on_key_press(this, Fl::event_key());
+                break;
             }
-            if (res) { redraw(); return res; }
+            if (res)
+            {
+                redraw();
+                return res;
+            }
         }
 
         switch (event)
         {
-            case FL_KEYBOARD: return handle_keydown(Fl::event_key());
-            case FL_PUSH: return handle_mouse_push();
-            case FL_DRAG: return handle_mouse_drag();
-            case FL_RELEASE: return handle_mouse_release();
-            case FL_MOUSEWHEEL:
+        case FL_KEYBOARD:
+            return handle_keydown(Fl::event_key());
+        case FL_PUSH:
+            return handle_mouse_push();
+        case FL_DRAG:
+            return handle_mouse_drag();
+        case FL_RELEASE:
+            return handle_mouse_release();
+        case FL_MOUSEWHEEL:
+        {
+            if (Fl::event_dy() == 0)
+                return 0;
+            double old_scale = scale_;
+            double mouse_wx = view_x_ + (Fl::event_x() - x()) / old_scale;
+            double mouse_wy = view_y_ + (Fl::event_y() - y()) / old_scale;
+
+            scale_ *= std::pow(1.25, -Fl::event_dy());
+            scale_ = std::clamp(scale_, 0.01, 100.0);
+
+            if (scale_ == old_scale)
+                return 1;
+
+            view_x_ = mouse_wx - (Fl::event_x() - x()) / scale_;
+            view_y_ = mouse_wy - (Fl::event_y() - y()) / scale_;
+            clamp_view();
+            bg_dirty_ = true;
+            redraw();
+            notify_view_changed();
+            return 1;
+        }
+        case FL_MOVE:
+        {
+            DragMode new_hover = hit_test_gizmo(Fl::event_x(), Fl::event_y());
+            if (new_hover != hover_mode_)
             {
-                if (Fl::event_dy() == 0) return 0;
-                double old_scale = scale_;
-                double mouse_wx = view_x_ + (Fl::event_x() - x()) / old_scale;
-                double mouse_wy = view_y_ + (Fl::event_y() - y()) / old_scale;
-
-                scale_ *= std::pow(1.25, -Fl::event_dy());
-                scale_ = std::clamp(scale_, 0.01, 100.0);
-
-                if (scale_ == old_scale) return 1;
-
-                view_x_ = mouse_wx - (Fl::event_x() - x()) / scale_;
-                view_y_ = mouse_wy - (Fl::event_y() - y()) / scale_;
-                clamp_view();
-                bg_dirty_ = true;
+                hover_mode_ = new_hover;
                 redraw();
-                notify_view_changed();
-                return 1;
             }
-            case FL_MOVE:
+            return 1;
+        }
+        case FL_ENTER:
+            return 1;
+        case FL_LEAVE:
+        {
+            if (hover_mode_ != DragMode::None)
             {
-                DragMode new_hover = hit_test_gizmo(Fl::event_x(), Fl::event_y());
-                if (new_hover != hover_mode_) { hover_mode_ = new_hover; redraw(); }
-                return 1;
+                hover_mode_ = DragMode::None;
+                redraw();
             }
-            case FL_ENTER: return 1;
-            case FL_LEAVE:
-            {
-                if (hover_mode_ != DragMode::None) { hover_mode_ = DragMode::None; redraw(); }
-                return 1;
-            }
+            return 1;
+        }
         }
         return Fl_Widget::handle(event);
     }

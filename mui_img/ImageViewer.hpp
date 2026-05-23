@@ -141,10 +141,9 @@ namespace mui
             double cx, cy;
             if (state_->document()->layer_count() == 0)
             {
-                cx = (state_->document()->mode() == DocumentMode::InfiniteCanvas) ? 0
-                                                                                  : state_->document()->canvas_width() * 0.5;
-                cy = (state_->document()->mode() == DocumentMode::InfiniteCanvas) ? 0
-                                                                                  : state_->document()->canvas_height() * 0.5;
+                const bool is_infinite = (state_->document()->mode() == DocumentMode::InfiniteCanvas);
+                cx = is_infinite ? 0 : state_->document()->canvas_width() * 0.5;
+                cy = is_infinite ? 0 : state_->document()->canvas_height() * 0.5;
             }
             else
             {

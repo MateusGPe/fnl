@@ -514,6 +514,84 @@ namespace mui
         AdvancedImageViewer &distribute_selection_horizontal() { return distribute_selection<0>(); }
         AdvancedImageViewer &distribute_selection_vertical() { return distribute_selection<1>(); }
 
+        AdvancedImageViewer &fit_layers_to_canvas()
+        {
+            // Only works in fixed canvas mode and with at least one layer
+            if (state_->document()->mode() != DocumentMode::FixedCanvas || state_->document()->layer_count() == 0)
+            {
+                return *this;
+            }
+
+            std::vector<int> all_indices;
+            all_indices.reserve(state_->document()->layer_count());
+            for (size_t i = 0; i < state_->document()->layer_count(); ++i)
+            {
+                all_indices.push_back(static_cast<int>(i));
+            }
+
+            perform_light_undoable_action(
+                all_indices,
+                [this]()
+                {
+                    // Get the combined bounding box of all layers
+                    double min_x = 1e99, min_y = 1e99, max_x = -1e99, max_y = -1e99;
+                    bool has_bounds = false;
+                    for (size_t i = 0; i < state_->document()->layer_count(); ++i)
+                    {
+                        if (auto l = get_image_layer(i))
+                        {
+                            Rect2D b = get_layer_world_bounds(*l);
+                            if (b.w > 0 || b.h > 0)
+                            {
+                                min_x = std::min(min_x, b.x);
+                                min_y = std::min(min_y, b.y);
+                                max_x = std::max(max_x, b.x + b.w);
+                                max_y = std::max(max_y, b.y + b.h);
+                                has_bounds = true;
+                            }
+                        }
+                    }
+
+                    if (!has_bounds)
+                        return;
+
+                    double layers_w = max_x - min_x;
+                    double layers_h = max_y - min_y;
+
+                    if (layers_w <= 1e-6 || layers_h <= 1e-6)
+                        return;
+
+                    // Get canvas dimensions and calculate scale factor with padding
+                    const double canvas_w = state_->document()->canvas_width();
+                    const double canvas_h = state_->document()->canvas_height();
+                    const double padding = 0.95; // A bit more space
+                    const double scale_x_factor = (canvas_w * padding) / layers_w;
+                    const double scale_y_factor = (canvas_h * padding) / layers_h;
+                    const double scale_factor = std::min(scale_x_factor, scale_y_factor);
+
+                    // Calculate centers
+                    const double layers_cx = min_x + layers_w * 0.5;
+                    const double layers_cy = min_y + layers_h * 0.5;
+                    const double canvas_cx = canvas_w * 0.5;
+                    const double canvas_cy = canvas_h * 0.5;
+
+                    // Apply scale and translation to all non-locked layers
+                    for (auto l : document()->layers())
+                        if (auto il = std::dynamic_pointer_cast<ImageLayer>(l); il && !il->locked)
+                        {
+                            il->x = (il->x - layers_cx) * scale_factor + canvas_cx;
+                            il->y = (il->y - layers_cy) * scale_factor + canvas_cy;
+                            il->scale_x *= scale_factor;
+                            il->scale_y *= scale_factor;
+                        }
+                });
+
+            // Finally, adjust the view to frame the canvas perfectly
+            fit_to_canvas();
+
+            return *this;
+        }
+
     private:
         template <int AlignMode>
         AdvancedImageViewer &align_selection()
@@ -595,12 +673,15 @@ namespace mui
                     for (const auto &l : selected_layers)
                     {
                         const auto bounds = get_layer_world_bounds(*l);
-                        if constexpr (DistributeMode == 0) total_size += bounds.w;
-                        else total_size += bounds.h;
+                        if constexpr (DistributeMode == 0)
+                            total_size += bounds.w;
+                        else
+                            total_size += bounds.h;
                     }
 
                     double span = (DistributeMode == 0) ? ((last_bounds.x + last_bounds.w) - first_bounds.x) : ((last_bounds.y + last_bounds.h) - first_bounds.y);
-                    if (span < total_size) return; // Don't distribute if layers overlap, gap would be negative
+                    if (span < total_size)
+                        return; // Don't distribute if layers overlap, gap would be negative
 
                     double gap = (span - total_size) / (selected_layers.size() - 1);
                     double current_pos = (DistributeMode == 0) ? (first_bounds.x + first_bounds.w + gap) : (first_bounds.y + first_bounds.h + gap);
@@ -610,8 +691,10 @@ namespace mui
                     {
                         auto l = selected_layers[i];
                         const auto current_bounds = get_layer_world_bounds(*l);
-                        if constexpr (DistributeMode == 0) l->x += (current_pos - current_bounds.x);
-                        else l->y += (current_pos - current_bounds.y);
+                        if constexpr (DistributeMode == 0)
+                            l->x += (current_pos - current_bounds.x);
+                        else
+                            l->y += (current_pos - current_bounds.y);
                         current_pos += ((DistributeMode == 0) ? current_bounds.w : current_bounds.h) + gap;
                     }
                 });

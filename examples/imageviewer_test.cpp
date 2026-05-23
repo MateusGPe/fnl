@@ -596,6 +596,51 @@ void test_distribution(mui::AdvancedImageViewer &viewer)
     std::cout << "PASSED: test_distribution" << std::endl;
 }
 
+void test_fit_layers_to_canvas(mui::AdvancedImageViewer &viewer)
+{
+    std::cout << "Running: test_fit_layers_to_canvas..." << std::endl;
+    viewer.clear_layers();
+    viewer.document_mode(mui::DocumentMode::FixedCanvas);
+    viewer.canvas_size(1000, 800);
+
+    uchar pixels[10 * 10 * 3] = {};
+    auto img = std::make_shared<mui::Image>(new Fl_RGB_Image(pixels, 10, 10, 3));
+    viewer.add_layer(img, "L1", -100, -100); // 10x10
+    viewer.add_layer(img, "L2", 200, 300);  // 10x10
+
+    // Before: layers are far apart.
+    // Bounds: min_x=-100, min_y=-100, max_x=210, max_y=310.
+    // width = 310, height = 410.
+
+    viewer.fit_layers_to_canvas();
+
+    // After: layers should be scaled and centered.
+    auto l1 = viewer.get_image_layer(0);
+    auto l2 = viewer.get_image_layer(1);
+
+    // Check if they are scaled by the same factor
+    assert(approx_equal(l1->scale_x, l1->scale_y));
+    assert(approx_equal(l2->scale_x, l2->scale_y));
+    assert(approx_equal(l1->scale_x, l2->scale_x));
+
+    // Check if the new group bounds are centered and fit within the canvas
+    double new_min_x = 1e99, new_min_y = 1e99, new_max_x = -1e99, new_max_y = -1e99;
+    mui::Rect2D b1 = viewer.get_layer_world_bounds(*l1);
+    mui::Rect2D b2 = viewer.get_layer_world_bounds(*l2);
+    new_min_x = std::min(b1.x, b2.x);
+    new_min_y = std::min(b1.y, b2.y);
+    new_max_x = std::max(b1.x + b1.w, b2.x + b2.w);
+    new_max_y = std::max(b1.y + b1.h, b2.y + b2.h);
+
+    double new_cx = new_min_x + (new_max_x - new_min_x) * 0.5;
+    double new_cy = new_min_y + (new_max_y - new_min_y) * 0.5;
+
+    assert(approx_equal(new_cx, 500.0, 1.0)); // canvas center x
+    assert(approx_equal(new_cy, 400.0, 1.0)); // canvas center y
+
+    std::cout << "PASSED: test_fit_layers_to_canvas" << std::endl;
+}
+
 int main(int, char **)
 {
     // We need a window for FLTK to be happy, but we don't need to show it.
@@ -623,6 +668,7 @@ int main(int, char **)
         test_alignment(*viewer);
         test_full_selection(*viewer);
         test_distribution(*viewer);
+        test_fit_layers_to_canvas(*viewer);
     }
     catch (const std::exception &e)
     {

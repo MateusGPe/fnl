@@ -10,8 +10,9 @@
 
 namespace mui
 {
-    struct GizmoHandles {
-        std::array<Point2D, 4> corners; // TL, TR, BR, BL
+    struct GizmoHandles
+    {
+        std::array<Point2D, 4> corners;
         Point2D rot_handle;
     };
 
@@ -77,18 +78,18 @@ namespace mui
             return {cx + min_x, cy + min_y, max_x - min_x, max_y - min_y};
         }
 
-        static inline Point2D get_bounds_center(const Rect2D& b) {
+        static inline Point2D get_bounds_center(const Rect2D &b)
+        {
             return {b.x + b.w * 0.5, b.y + b.h * 0.5};
         }
 
-        static inline std::array<Point2D, 4> get_bounds_corners(const Rect2D& b, double cx, double cy, double angle_deg, bool flip_h, bool flip_v)
+        static inline std::array<Point2D, 4> get_bounds_corners(const Rect2D &b, double cx, double cy, double angle_deg, bool flip_h, bool flip_v)
         {
             return {
                 local_to_world(b.x, b.y, cx, cy, angle_deg, flip_h, flip_v),
                 local_to_world(b.x + b.w, b.y, cx, cy, angle_deg, flip_h, flip_v),
                 local_to_world(b.x + b.w, b.y + b.h, cx, cy, angle_deg, flip_h, flip_v),
-                local_to_world(b.x, b.y + b.h, cx, cy, angle_deg, flip_h, flip_v)
-            };
+                local_to_world(b.x, b.y + b.h, cx, cy, angle_deg, flip_h, flip_v)};
         }
 
         static inline std::array<Point2D, 4> get_layer_corners(const ImageLayer &l)
@@ -97,7 +98,6 @@ namespace mui
             return get_bounds_corners(b, b.x + b.w * 0.5, b.y + b.h * 0.5, l.rotation_angle, l.flip_h, l.flip_v);
         }
 
-        // UNIFIED MATH: Calculates all active gizmo interactive points in world coordinates
         static inline GizmoHandles get_gizmo_handles(const ImageLayer &l, double rot_offset_world)
         {
             GizmoHandles g;
@@ -109,10 +109,16 @@ namespace mui
             double w_dy = g.corners[1].y - g.corners[0].y;
 
             double len = std::sqrt(w_dx * w_dx + w_dy * w_dy);
-            if (len > 1e-6) { w_dx /= len; w_dy /= len; }
-            else { w_dx = 1; w_dy = 0; }
-            
-            // Perpendicular up-vector for the rotation handle
+            if (len > 1e-6)
+            {
+                w_dx /= len;
+                w_dy /= len;
+            }
+            else
+            {
+                w_dx = 1;
+                w_dy = 0;
+            }
             g.rot_handle = {w_mid_x + w_dy * rot_offset_world, w_mid_y - w_dx * rot_offset_world};
             return g;
         }
