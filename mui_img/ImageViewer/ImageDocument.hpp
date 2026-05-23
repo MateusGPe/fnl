@@ -3,11 +3,11 @@
 #include <vector>
 #include <memory>
 #include <unordered_map>
-#include "Layers/Layer.hpp"
 #include "Types.hpp"
 
 namespace mui
 {
+    // A pure data class representing the image state without any knowledge of the UI
     class ImageDocument
     {
     private:

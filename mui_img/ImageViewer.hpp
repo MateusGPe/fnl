@@ -71,27 +71,26 @@ namespace mui
                 img, name, lx, ly,
                 int(img->width()), int(img->height()),
                 1.0, 1.0, 0.0, 1.0, BlendMode::Normal, true, false, thumb);
-            document_->add_layer(layer);
-            clear_selection();
-            set_primary_selection(layer->id);
-            invalidate();
+            state_->document()->add_layer(layer);
+            state_->clear_selection();
+            state_->set_primary_selection(layer->id);
+            state_->notify_changed();
             return *this;
         }
 
         ImageViewer &select_layer(int index)
         {
-            clear_selection();
-            if (index >= 0 && index < (int)document_->layer_count())
-                set_primary_selection(document_->get_layer(index)->id);
-            redraw();
+            state_->clear_selection();
+            if (index >= 0 && index < (int)state_->document()->layer_count())
+                state_->set_primary_selection(state_->document()->get_layer(index)->id);
             return *this;
         }
 
         ImageViewer &clear_layers()
         {
-            document_->clear_layers();
-            clear_selection();
-            invalidate();
+            state_->document()->clear_layers();
+            state_->clear_selection();
+            state_->notify_changed();
             return *this;
         }
 
@@ -107,8 +106,8 @@ namespace mui
 
         ImageViewer &fit_all()
         {
-            if (document_->layer_count() == 0 &&
-                document_->mode() == DocumentMode::InfiniteCanvas)
+            if (state_->document()->layer_count() == 0 &&
+                state_->document()->mode() == DocumentMode::InfiniteCanvas)
             {
                 view_x_ = 0;
                 view_y_ = 0;
@@ -128,9 +127,9 @@ namespace mui
 
         ImageViewer &fit_to_canvas()
         {
-            if (document_->mode() == DocumentMode::InfiniteCanvas)
+            if (state_->document()->mode() == DocumentMode::InfiniteCanvas)
                 return fit_all();
-            frame_region(0, 0, document_->canvas_width(), document_->canvas_height());
+            frame_region(0, 0, state_->document()->canvas_width(), state_->document()->canvas_height());
             clamp_view();
             invalidate();
             notify_view_changed();
@@ -140,12 +139,12 @@ namespace mui
         ImageViewer &center_all()
         {
             double cx, cy;
-            if (document_->layer_count() == 0)
+            if (state_->document()->layer_count() == 0)
             {
-                cx = (document_->mode() == DocumentMode::InfiniteCanvas) ? 0
-                                                                         : document_->canvas_width() * 0.5;
-                cy = (document_->mode() == DocumentMode::InfiniteCanvas) ? 0
-                                                                         : document_->canvas_height() * 0.5;
+                cx = (state_->document()->mode() == DocumentMode::InfiniteCanvas) ? 0
+                                                                                  : state_->document()->canvas_width() * 0.5;
+                cy = (state_->document()->mode() == DocumentMode::InfiniteCanvas) ? 0
+                                                                                  : state_->document()->canvas_height() * 0.5;
             }
             else
             {
@@ -179,19 +178,19 @@ namespace mui
 
         ImageViewer &document_mode(DocumentMode mode)
         {
-            document_->mode(mode);
+            state_->document()->mode(mode);
             clamp_view();
-            invalidate();
+            state_->notify_changed();
             return *this;
         }
 
         ImageViewer &canvas_size(int w, int h)
         {
-            document_->canvas_size(w, h);
-            if (document_->mode() == DocumentMode::FixedCanvas)
+            state_->document()->canvas_size(w, h);
+            if (state_->document()->mode() == DocumentMode::FixedCanvas)
             {
                 clamp_view();
-                invalidate();
+                state_->notify_changed();
             }
             return *this;
         }
@@ -219,7 +218,7 @@ namespace mui
         double view_y() const { return view_y_; }
         int selected_layer() const { return get_selected_layer_index(); }
 
-        std::shared_ptr<ImageDocument> document() const { return document_; }
+        std::shared_ptr<ImageDocument> document() const { return state_->document(); }
         InternalImageViewer *internal_ptr() { return this; }
 
         void get_world_bounds(double &min_x, double &min_y, double &max_x, double &max_y)

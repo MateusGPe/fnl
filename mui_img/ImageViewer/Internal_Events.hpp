@@ -65,7 +65,7 @@ namespace mui
 
     inline int InternalImageViewer::hit_test(double world_x, double world_y)
     {
-        for (int i = static_cast<int>(document_->layer_count()) - 1; i >= 0; --i)
+        for (int i = static_cast<int>(state_->document()->layer_count()) - 1; i >= 0; --i)
         {
             if (!is_layer_visible(i))
                 continue;
@@ -74,7 +74,6 @@ namespace mui
                 continue;
             const auto &l = *l_ptr;
 
-            // Reuse get_effective_bounds – no copy-paste
             Rect2D b = layer_effective_rect(l);
 
             double local_wx, local_wy;
@@ -122,7 +121,6 @@ namespace mui
             }
         }
 
-        // Fallback: sample from rendered offscreen
         if (bg_buffer_ && mx >= 0 && mx < w() && my >= 0 && my < h())
         {
             fl_begin_offscreen(bg_buffer_);
@@ -135,7 +133,6 @@ namespace mui
 
     inline int InternalImageViewer::handle(int event)
     {
-        // --- Delegate to active tool plug-in first ---------------------------
         if (active_tool_state_)
         {
             double wx, wy;
@@ -166,36 +163,31 @@ namespace mui
 
         switch (event)
         {
-        // ---------------------------------------------------------------
         case FL_KEYBOARD:
         {
-            if (selection_ids_.empty())
+            if (state_->selection_ids().empty())
                 return 0;
 
             int key = Fl::event_key();
 
-            // Delete / Backspace → remove all selected layers
             if (key == FL_Delete || key == FL_BackSpace)
             {
-                if (!selection_ids_.empty())
+                if (!state_->selection_ids().empty())
                 {
                     perform_heavy_undoable_action([this]()
-                    {
-                        // Collect and sort descending so indices stay valid
+                                                  {
                         std::vector<int> to_delete;
-                        for (int id : selection_ids_)
-                            if (int idx = document_->get_layer_index(id); idx >= 0)
+                        for (int id : state_->selection_ids())
+                            if (int idx = state_->document()->get_layer_index(id); idx >= 0)
                                 to_delete.push_back(idx);
                         std::sort(to_delete.rbegin(), to_delete.rend());
                         for (int idx : to_delete)
-                            document_->remove_layer(idx);
-                        clear_selection();
-                    });
+                            state_->document()->remove_layer(idx);
+                        state_->clear_selection(); });
                 }
                 return 1;
             }
 
-            // Arrow nudge (primary layer only)
             double nudge = Fl::event_state(FL_SHIFT) ? 10.0 : 1.0;
             double dx = 0.0, dy = 0.0;
             switch (key)
@@ -216,28 +208,26 @@ namespace mui
             if (dx != 0.0 || dy != 0.0)
             {
                 std::vector<int> indices;
-                for (int id : selection_ids_)
-                    if (int idx = document_->get_layer_index(id); idx >= 0)
+                for (int id : state_->selection_ids())
+                    if (int idx = state_->document()->get_layer_index(id); idx >= 0)
                         indices.push_back(idx);
 
                 perform_light_undoable_action(indices, [this, dx, dy]()
-                {
-                    for (int id : selection_ids_) {
-                        int idx = document_->get_layer_index(id);
+                                              {
+                    for (int id : state_->selection_ids()) {
+                        int idx = state_->document()->get_layer_index(id);
                         auto lp = get_image_layer(idx);
                         if (lp && !lp->locked) {
                             lp->x += dx;
                             lp->y += dy;
                             clamp_world_coords(lp->x, lp->y);
                         }
-                    }
-                });
+                    } });
                 return 1;
             }
             break;
         }
 
-        // ---------------------------------------------------------------
         case FL_PUSH:
         {
             last_mouse_x_ = Fl::event_x();
@@ -249,29 +239,24 @@ namespace mui
             drag_mode_ = DragMode::None;
             drag_undo_state_pushed_ = false;
 
-            // --- Right click ------------------------------------------
             if (Fl::event_button() == FL_RIGHT_MOUSE)
             {
                 int hit_idx = hit_test(world_x, world_y);
                 if (hit_idx >= 0 && hit_idx != get_selected_layer_index())
                 {
-                    clear_selection();
-                    set_primary_selection(document_->get_layer(hit_idx)->id);
-                    notify_layer_selected();
-                    redraw();
+                    state_->clear_selection();
+                    state_->set_primary_selection(state_->document()->get_layer(hit_idx)->id);
                 }
                 notify_right_click();
                 return 1;
             }
 
-            // --- Middle mouse -----------------------------------------
             if (Fl::event_button() == FL_MIDDLE_MOUSE)
             {
                 drag_mode_ = DragMode::Pan;
                 return 1;
             }
 
-            // --- Left mouse ------------------------------------------
             if (Fl::event_button() == FL_LEFT_MOUSE)
             {
                 if (hit_test_minimap(last_mouse_x_, last_mouse_y_))
@@ -281,7 +266,6 @@ namespace mui
                     return 1;
                 }
 
-                // Scale handle takes priority over everything
                 if (active_tool_ == ViewerTool::Select || active_tool_ == ViewerTool::Move)
                 {
                     if (auto lp = get_selected_image_layer(); lp && !lp->locked)
@@ -327,48 +311,40 @@ namespace mui
                     return 1;
                 }
 
-                // Select / Move tools: click to (multi-)select then drag
                 {
                     int hit_idx = hit_test(world_x, world_y);
                     bool ctrl = Fl::event_state(FL_CTRL) || Fl::event_state(FL_META);
 
                     if (hit_idx >= 0)
                     {
-                        int hit_id = document_->get_layer(hit_idx)->id;
+                        int hit_id = state_->document()->get_layer(hit_idx)->id;
                         if (ctrl)
                         {
-                            toggle_selection(hit_id);
+                            state_->toggle_selection(hit_id);
                         }
-                        else if (!is_in_selection(hit_id))
+                        else if (!state_->is_in_selection(hit_id))
                         {
-                            clear_selection();
-                            set_primary_selection(hit_id);
+                            state_->clear_selection();
+                            state_->set_primary_selection(hit_id);
                         }
                         else
                         {
-                            // Already in selection → just update primary
-                            selected_layer_id_ = hit_id;
+                            state_->set_primary_selection(hit_id);
                         }
-                        notify_layer_selected();
-                        redraw();
                     }
                     else if (!ctrl)
                     {
-                        // Click on empty space without Ctrl → deselect all
-                        clear_selection();
-                        notify_layer_selected();
-                        redraw();
+                        state_->clear_selection();
                     }
 
-                    // Start group move if primary layer is movable
                     if (auto lp = get_selected_image_layer(); lp && !lp->locked)
                     {
                         drag_mode_ = DragMode::MoveLayer;
                         orig_layer_x_ = lp->x;
                         orig_layer_y_ = lp->y;
-                        capture_multi_drag_origins(); // snapshot all selected
+                        capture_multi_drag_origins();
                     }
-                    else if (selection_ids_.empty())
+                    else if (state_->selection_ids().empty())
                     {
                         drag_mode_ = DragMode::Pan;
                     }
@@ -378,7 +354,6 @@ namespace mui
             break;
         }
 
-        // ---------------------------------------------------------------
         case FL_DRAG:
         {
             double world_x, world_y;
@@ -388,15 +363,14 @@ namespace mui
 
             if ((is_scale_mode(drag_mode_) || drag_mode_ == DragMode::MoveLayer) && !drag_undo_record_)
             {
-                drag_undo_record_ = std::make_unique<LayerPropsChangeRecord>();
-                for (int id : selection_ids_)
+                std::vector<int> indices;
+                for (int id : state_->selection_ids())
                 {
-                    int idx = document_->get_layer_index(id);
-                    if (auto l = get_image_layer(idx))
-                    {
-                        drag_undo_record_->props[id] = l->clone();
-                    }
+                    int idx = state_->document()->get_layer_index(id);
+                    if (idx >= 0)
+                        indices.push_back(idx);
                 }
+                drag_undo_record_ = std::make_unique<LayerPropsCommand>(*state_, indices);
                 drag_undo_state_pushed_ = true;
             }
 
@@ -411,12 +385,11 @@ namespace mui
                 double ddx = world_x - drag_start_x_;
                 double ddy = world_y - drag_start_y_;
 
-                if (selection_ids_.size() > 1)
+                if (state_->selection_ids().size() > 1)
                 {
-                    // Group move: apply delta to every selected layer
                     for (auto &[id, origin] : multi_drag_origins_)
                     {
-                        int idx = document_->get_layer_index(id);
+                        int idx = state_->document()->get_layer_index(id);
                         if (idx < 0)
                             continue;
                         if (auto lp = get_image_layer(idx))
@@ -429,11 +402,10 @@ namespace mui
                 }
                 else if (auto lp = get_selected_image_layer())
                 {
-                    // Single layer move with edge snapping
                     double target_x = orig_layer_x_ + ddx;
                     double target_y = orig_layer_y_ + ddy;
                     const double SNAP = 10.0 / scale_;
-                    for (size_t i = 0; i < document_->layer_count(); ++i)
+                    for (size_t i = 0; i < state_->document()->layer_count(); ++i)
                     {
                         if ((int)i == get_selected_layer_index())
                             continue;
@@ -531,12 +503,12 @@ namespace mui
             return 1;
         }
 
-        // ---------------------------------------------------------------
         case FL_RELEASE:
         {
             if (drag_undo_state_pushed_ && drag_undo_record_)
             {
-                push_undo_record(std::move(drag_undo_record_));
+                drag_undo_record_->capture_after(*state_);
+                undo_mgr_->push(std::move(drag_undo_record_));
             }
             drag_undo_record_ = nullptr;
             drag_undo_state_pushed_ = false;
@@ -564,7 +536,6 @@ namespace mui
 
                         if (cw_c > 1.0 && ch_c > 1.0)
                         {
-                            // Compute world position of new crop centre
                             Rect2D cur = layer_effective_rect(l);
                             double C_x = cur.x + cur.w * 0.5;
                             double C_y = cur.y + cur.h * 0.5;
@@ -578,15 +549,16 @@ namespace mui
 
                             Point2D W = Transform::local_to_world(C_ux, C_uy, C_x, C_y,
                                                                   l.rotation_angle, l.flip_h, l.flip_v);
-                            perform_heavy_undoable_action([&]()
-                                                          {
-                                l.crop_x = cx_c;
-                                l.crop_y = cy_c;
-                                l.crop_w = cw_c;
-                                l.crop_h = ch_c;
-                                l.x += (W.x - C_ux);
-                                l.y += (W.y - C_uy);
-                            });
+                            perform_heavy_undoable_action(
+                                [&]()
+                                {
+                                    l.crop_x = cx_c;
+                                    l.crop_y = cy_c;
+                                    l.crop_w = cw_c;
+                                    l.crop_h = ch_c;
+                                    l.x += (W.x - C_ux);
+                                    l.y += (W.y - C_uy);
+                                });
                         }
                     }
                 }
@@ -595,25 +567,22 @@ namespace mui
             }
 
             drag_mode_ = DragMode::None;
-            notify_view_changed(); // single notification on release
+            notify_view_changed();
             return 1;
         }
 
-        // ---------------------------------------------------------------
         case FL_MOUSEWHEEL:
         {
             if (Fl::event_dy() == 0)
-                return 0; // Ignore pure horizontal scrolls or zero-delta events
+                return 0;
 
             double old_scale = scale_;
             double mouse_wx = view_x_ + (Fl::event_x() - x()) / old_scale;
             double mouse_wy = view_y_ + (Fl::event_y() - y()) / old_scale;
 
-            // Support high-frequency fractional trackpad events instead of fixed 25% jumps
             scale_ *= std::pow(1.25, -Fl::event_dy());
             scale_ = std::clamp(scale_, 0.01, 100.0);
 
-            // Prevent layout micro-jitters and unnecessary redraws if hitting the limit
             if (scale_ == old_scale)
                 return 1;
 
@@ -626,7 +595,6 @@ namespace mui
             return 1;
         }
 
-        // ---------------------------------------------------------------
         case FL_MOVE:
         {
             DragMode new_hover = hit_test_gizmo(Fl::event_x(), Fl::event_y());

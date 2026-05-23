@@ -12,31 +12,6 @@ namespace mui
 {
     class AdvancedImageViewer : public ImageViewer
     {
-    protected:
-        template <typename Action>
-        void perform_heavy_undoable_action(Action action)
-        {
-            push_undo_record(
-                std::make_unique<DocumentChangeRecord>(create_state_memento()));
-            action();
-            invalidate();
-            notify_view_changed();
-        }
-
-        template <typename Action>
-        void perform_light_undoable_action(const std::vector<int> &layer_indices, Action action)
-        {
-            auto record = std::make_unique<LayerPropsChangeRecord>();
-            for (int index : layer_indices)
-                if (auto l = get_image_layer(index))
-                    record->props[l->id] = l->clone();
-
-            push_undo_record(std::move(record));
-            action();
-            invalidate();
-            notify_view_changed();
-        }
-
     public:
         explicit AdvancedImageViewer(int x = 0, int y = 0, int w = 0, int h = 0,
                                      const char *label = nullptr)
@@ -70,10 +45,11 @@ namespace mui
                                 img, name, lx, ly,
                                 int(img->width()), int(img->height()),
                                 1.0, 1.0, 0.0, 1.0, BlendMode::Normal, true, false, thumb);
-                            document_->add_layer(layer);
-                            clear_selection();
-                            set_primary_selection(layer->id);
-                            invalidate();
+
+                            state_->document()->add_layer(layer);
+                            state_->clear_selection();
+                            state_->set_primary_selection(layer->id);
+                            state_->notify_changed();
                         }
                         Dispatcher::awake<T, Method>(instance);
                     }
@@ -92,64 +68,63 @@ namespace mui
 
         AdvancedImageViewer &add_to_selection(int index)
         {
-            if (index >= 0 && index < (int)document_->layer_count())
+            if (index >= 0 && index < (int)state_->document()->layer_count())
             {
-                int id = document_->get_layer(index)->id;
-                selection_ids_.insert(id);
-                selected_layer_id_ = id;
+                int id = state_->document()->get_layer(index)->id;
+                state_->set_primary_selection(id);
             }
-            redraw();
             return *this;
         }
 
         AdvancedImageViewer &remove_from_selection(int index)
         {
-            if (index >= 0 && index < (int)document_->layer_count())
+            if (index >= 0 && index < (int)state_->document()->layer_count())
             {
-                int id = document_->get_layer(index)->id;
-                toggle_selection(id);
+                int id = state_->document()->get_layer(index)->id;
+                state_->toggle_selection(id);
             }
-            redraw();
             return *this;
         }
 
         bool is_selected(int index) const
         {
-            if (index < 0 || index >= (int)document_->layer_count())
+            if (index < 0 || index >= (int)state_->document()->layer_count())
                 return false;
-            return is_in_selection(document_->get_layer(index)->id);
+            return state_->is_in_selection(state_->document()->get_layer(index)->id);
         }
 
-        int selection_count() const { return static_cast<int>(selection_ids_.size()); }
+        int selection_count() const { return static_cast<int>(state_->selection_ids().size()); }
 
         AdvancedImageViewer &delete_selection()
         {
-            if (selection_ids_.empty())
+            if (state_->selection_ids().empty())
                 return *this;
+
             perform_heavy_undoable_action([this]()
                                           {
                 std::vector<int> to_delete;
-                for (int id : selection_ids_)
-                    if (int idx = document_->get_layer_index(id); idx >= 0)
+                for (int id : state_->selection_ids())
+                    if (int idx = state_->document()->get_layer_index(id); idx >= 0)
                         to_delete.push_back(idx);
                 std::sort(to_delete.rbegin(), to_delete.rend());
                 for (int idx : to_delete)
-                    document_->remove_layer(idx);
-                clear_selection(); });
+                    state_->document()->remove_layer(idx);
+                state_->clear_selection(); });
             return *this;
         }
 
         AdvancedImageViewer &remove_layer(int index)
         {
-            if (index >= 0 && index < (int)document_->layer_count())
+            if (index >= 0 && index < (int)state_->document()->layer_count())
             {
                 perform_heavy_undoable_action([this, index]()
                                               {
-                    int id_to_remove = document_->get_layer(index)->id;
-                    document_->remove_layer(index);
-                    selection_ids_.erase(id_to_remove);
-                    if (selected_layer_id_ == id_to_remove)
-                        selected_layer_id_ = selection_ids_.empty() ? -1 : *selection_ids_.begin(); });
+                    int id_to_remove = state_->document()->get_layer(index)->id;
+                    state_->document()->remove_layer(index);
+                    if (state_->is_in_selection(id_to_remove))
+                    {
+                        state_->toggle_selection(id_to_remove);
+                    } });
             }
             return *this;
         }
@@ -172,17 +147,17 @@ namespace mui
 
         AdvancedImageViewer &move_layer_up(int index)
         {
-            if (index >= 0 && index < (int)document_->layer_count() - 1)
+            if (index >= 0 && index < (int)state_->document()->layer_count() - 1)
                 perform_heavy_undoable_action([this, index]()
-                                              { document_->swap_layers(index, index + 1); });
+                                              { state_->document()->swap_layers(index, index + 1); });
             return *this;
         }
 
         AdvancedImageViewer &move_layer_down(int index)
         {
-            if (index > 0 && index < (int)document_->layer_count())
+            if (index > 0 && index < (int)state_->document()->layer_count())
                 perform_heavy_undoable_action([this, index]()
-                                              { document_->swap_layers(index, index - 1); });
+                                              { state_->document()->swap_layers(index, index - 1); });
             return *this;
         }
 
@@ -198,17 +173,17 @@ namespace mui
 
         AdvancedImageViewer &move_selection_by(double dx, double dy)
         {
-            if (selection_ids_.empty())
+            if (state_->selection_ids().empty())
                 return *this;
             std::vector<int> indices;
-            for (int id : selection_ids_)
-                if (int idx = document_->get_layer_index(id); idx >= 0)
+            for (int id : state_->selection_ids())
+                if (int idx = state_->document()->get_layer_index(id); idx >= 0)
                     indices.push_back(idx);
 
             perform_light_undoable_action(indices, [this, dx, dy]()
                                           {
-                for (int id : selection_ids_)
-                    if (auto l = get_image_layer(document_->get_layer_index(id)))
+                for (int id : state_->selection_ids())
+                    if (auto l = get_image_layer(state_->document()->get_layer_index(id)))
                     {
                         l->x += dx;
                         l->y += dy;
@@ -268,8 +243,8 @@ namespace mui
         }
 
         AdvancedImageViewer &crop_layer(int index,
-                                double crop_x, double crop_y,
-                                double crop_w, double crop_h)
+                                        double crop_x, double crop_y,
+                                        double crop_w, double crop_h)
         {
             auto l = get_image_layer(index);
             if (!l || !l->image || !l->image->handle())
@@ -284,7 +259,6 @@ namespace mui
             if (nw < 1.0 || nh < 1.0)
                 return *this;
 
-            // Crop is a mix of property change and position change, so treat as heavy.
             perform_heavy_undoable_action([=]()
                                           {
                 double ox = (l->crop_w >= 0) ? l->crop_x : 0.0;
@@ -303,16 +277,16 @@ namespace mui
 
         AdvancedImageViewer &layer_id(int index, int id)
         {
-            if (index >= 0 && index < (int)document_->layer_count())
-                document_->get_layer(index)->id = id;
+            if (index >= 0 && index < (int)state_->document()->layer_count())
+                state_->document()->get_layer(index)->id = id;
             return *this;
         }
 
         AdvancedImageViewer &layer_parent(int index, int parent_id)
         {
-            if (index >= 0 && index < (int)document_->layer_count())
+            if (index >= 0 && index < (int)state_->document()->layer_count())
             {
-                auto lyr = document_->get_layer(index);
+                auto lyr = state_->document()->get_layer(index);
                 perform_light_undoable_action({index}, [lyr, parent_id]()
                                               { lyr->parent_id = parent_id; });
             }
@@ -321,22 +295,22 @@ namespace mui
 
         AdvancedImageViewer &max_undo_records(size_t max_records)
         {
-            max_undo_records_ = max_records;
+            undo_mgr_->set_max_records(max_records);
             return *this;
         }
-        size_t max_undo_records() const { return max_undo_records_; }
+        size_t max_undo_records() const { return undo_mgr_->max_records(); }
 
         std::string export_json() const
         {
             std::stringstream ss;
             ss << "[\n";
-            for (size_t i = 0; i < document_->layer_count(); ++i)
+            for (size_t i = 0; i < state_->document()->layer_count(); ++i)
             {
                 if (auto l = get_image_layer(i))
                     ss << "  {\"name\":\"" << l->name << "\","
                        << "\"x\":" << l->x << ",\"y\":" << l->y << ","
                        << "\"sx\":" << l->scale_x << ",\"sy\":" << l->scale_y << "}";
-                if (i < document_->layer_count() - 1)
+                if (i < state_->document()->layer_count() - 1)
                     ss << ",";
                 ss << "\n";
             }

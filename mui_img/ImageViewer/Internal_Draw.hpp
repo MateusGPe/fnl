@@ -13,15 +13,15 @@ namespace mui
 
         int bg_cx = cx, bg_cy = cy, bg_cw = cw, bg_ch = ch;
 
-        if (document_->mode() == DocumentMode::FixedCanvas)
+        if (state_->document()->mode() == DocumentMode::FixedCanvas)
         {
             fl_color(ThemeManager::get_palette().bg_main);
             fl_rectf(cx, cy, cw, ch);
 
             bg_cx = cx + static_cast<int>(std::round((0 - view_x_) * scale_));
             bg_cy = cy + static_cast<int>(std::round((0 - view_y_) * scale_));
-            bg_cw = std::max(1, static_cast<int>(std::round(document_->canvas_width() * scale_)));
-            bg_ch = std::max(1, static_cast<int>(std::round(document_->canvas_height() * scale_)));
+            bg_cw = std::max(1, static_cast<int>(std::round(state_->document()->canvas_width() * scale_)));
+            bg_ch = std::max(1, static_cast<int>(std::round(state_->document()->canvas_height() * scale_)));
 
             fl_push_clip(bg_cx, bg_cy, bg_cw, bg_ch);
         }
@@ -37,7 +37,7 @@ namespace mui
             draw_checker(bg_cx, bg_cy, bg_cw, bg_ch, checker_size);
         }
 
-        if (document_->mode() == DocumentMode::FixedCanvas)
+        if (state_->document()->mode() == DocumentMode::FixedCanvas)
         {
             fl_pop_clip();
             fl_color(ThemeManager::get_palette().btn_frame.out_top);
@@ -60,9 +60,9 @@ namespace mui
     {
         int primary_sel_idx = get_selected_layer_index();
 
-        for (int layer_id : selection_ids_)
+        for (int layer_id : state_->selection_ids())
         {
-            int sel_idx = document_->get_layer_index(layer_id);
+            int sel_idx = state_->document()->get_layer_index(layer_id);
             if (auto l_ptr = get_image_layer(sel_idx))
             {
                 const auto &l = *l_ptr;
@@ -199,7 +199,7 @@ namespace mui
 
         fl_push_clip(mi.x, mi.y, mi.w, mi.h);
 
-        for (size_t i = 0; i < document_->layer_count(); ++i)
+        for (size_t i = 0; i < state_->document()->layer_count(); ++i)
         {
             if (!is_layer_visible(i))
                 continue;
@@ -420,22 +420,22 @@ namespace mui
             fl_begin_offscreen(bg_buffer_);
             draw_background(0, 0, w(), h());
 
-            if (document_->mode() == DocumentMode::FixedCanvas)
+            if (state_->document()->mode() == DocumentMode::FixedCanvas)
             {
                 int bg_cx = static_cast<int>(std::round((0 - view_x_) * scale_));
                 int bg_cy = static_cast<int>(std::round((0 - view_y_) * scale_));
-                int bg_cw = std::max(1, static_cast<int>(std::round(document_->canvas_width() * scale_)));
-                int bg_ch = std::max(1, static_cast<int>(std::round(document_->canvas_height() * scale_)));
+                int bg_cw = std::max(1, static_cast<int>(std::round(state_->document()->canvas_width() * scale_)));
+                int bg_ch = std::max(1, static_cast<int>(std::round(state_->document()->canvas_height() * scale_)));
                 fl_push_clip(bg_cx, bg_cy, bg_cw, bg_ch);
             }
 
-            for (size_t i = 0; i < document_->layer_count(); ++i)
+            for (size_t i = 0; i < state_->document()->layer_count(); ++i)
             {
                 if (auto l = get_image_layer(i))
                     render_layer_to_buffer(*l, i, w(), h(), view_x_, view_y_, scale_);
             }
 
-            if (document_->mode() == DocumentMode::FixedCanvas)
+            if (state_->document()->mode() == DocumentMode::FixedCanvas)
             {
                 fl_pop_clip();
             }
@@ -455,7 +455,6 @@ namespace mui
         int world_w = std::max(1, static_cast<int>(std::round(max_x - min_x)));
         int world_h = std::max(1, static_cast<int>(std::round(max_y - min_y)));
 
-        // Prevent OOM and overflow crashes on excessive dimensions
         if (world_w <= 0 || world_h <= 0 || world_w > 16384 || world_h > 16384)
         {
             fprintf(stderr, "Export failed: Invalid or excessively large dimensions.\n");
@@ -485,7 +484,7 @@ namespace mui
             }
         }
 
-        for (size_t i = 0; i < document_->layer_count(); ++i)
+        for (size_t i = 0; i < state_->document()->layer_count(); ++i)
         {
             if (auto l = get_image_layer(i))
                 render_layer_to_buffer(*l, i, world_w, world_h, min_x, min_y, 1.0);

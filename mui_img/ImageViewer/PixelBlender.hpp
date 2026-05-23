@@ -9,7 +9,7 @@ namespace mui
     class PixelBlender
     {
     public:
-        static inline void blend_pixels(BlendMode mode, float fr, float fg, float fb, float br, float bg, float bb, float alpha, uchar* out)
+        static inline void blend_pixels(BlendMode mode, float fr, float fg, float fb, float br, float bg, float bb, float alpha, uchar *out)
         {
             float out_r = fr, out_g = fg, out_b = fb;
 
@@ -37,7 +37,7 @@ namespace mui
             out[2] = static_cast<uchar>(std::clamp(out_b * alpha + bb * (1.0f - alpha), 0.0f, 255.0f));
         }
 
-        static inline void bilerp(const uchar* fg_data, float src_px, float src_py, int img_w, int img_h, int fg_ld, int fg_d, float& fr, float& fg, float& fb, float& fa)
+        static inline void bilerp(const uchar *fg_data, float src_px, float src_py, int img_w, int img_h, int fg_ld, int fg_d, float &fr, float &fg, float &fb, float &fa)
         {
             const int x1_full = static_cast<int>(std::floor(src_px));
             const int y1_full = static_cast<int>(std::floor(src_py));
@@ -54,7 +54,8 @@ namespace mui
             const int idx12 = y2 * fg_ld + x1 * fg_d;
             const int idx22 = y2 * fg_ld + x2 * fg_d;
 
-            auto lerp_chan = [&](int offset) {
+            auto lerp_chan = [&](int offset)
+            {
                 const float c11 = fg_data[idx11 + offset];
                 const float c21 = fg_data[idx21 + offset];
                 const float c12 = fg_data[idx12 + offset];
