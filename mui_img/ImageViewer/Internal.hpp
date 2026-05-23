@@ -45,6 +45,11 @@ namespace mui
         y = std::clamp(y, MIN_WORLD_COORD, MAX_WORLD_COORD);
     }
 
+    struct DragOriginState
+    {
+        double x, y, sx, sy, rot;
+    };
+
     struct MinimapInfo
     {
         int x, y, w, h;
@@ -106,10 +111,10 @@ namespace mui
         int last_mouse_y_ = 0;
         double drag_start_x_ = 0;
         double drag_start_y_ = 0;
-        double orig_layer_x_ = 0, orig_layer_y_ = 0;
-        double orig_layer_sx_ = 1, orig_layer_sy_ = 1;
-
-        std::vector<std::pair<int, std::pair<double, double>>> multi_drag_origins_;
+        std::unordered_map<int, DragOriginState> multi_drag_origins_;
+        Rect2D orig_group_bounds_;
+        Point2D group_drag_center_;
+        std::vector<Line2D> snap_lines_;
         std::unique_ptr<LayerPropsCommand> drag_undo_record_;
         DragMode drag_mode_ = DragMode::None;
         DragMode hover_mode_ = DragMode::None;
@@ -117,6 +122,7 @@ namespace mui
 
         bool bilinear_filtering_ = true;
         int grid_size_;
+        bool snap_to_canvas_ = true;
         bool use_solid_bg_ = false;
         Fl_Color solid_bg_color_ = 0;
 
@@ -176,22 +182,50 @@ namespace mui
         {
             multi_drag_origins_.clear();
             for (int id : state_->selection_ids())
-            {
-                int idx = state_->document()->get_layer_index(id);
-                if (idx == -1)
-                    continue;
-                if (auto l = get_image_layer(idx))
-                    multi_drag_origins_.push_back({id, {l->x, l->y}});
-            }
+                if (auto l = get_image_layer(state_->document()->get_layer_index(id)))
+                    multi_drag_origins_[id] = {l->x, l->y, l->scale_x, l->scale_y, l->rotation_angle};
         }
 
+        // Helper struct to abstract crop drags 
+        struct CropDragBox {
+            double min_lx, min_ly, max_lx, max_ly;
+            double w() const { return max_lx - min_lx; }
+            double h() const { return max_ly - min_ly; }
+        };
+
+        CropDragBox get_crop_drag_box() const {
+            double min_lx, min_ly, max_lx, max_ly;
+            if (Fl::event_state(FL_CTRL)) {
+                double dx = std::abs(crop_end_x_ - crop_start_x_);
+                double dy = std::abs(crop_end_y_ - crop_start_y_);
+                min_lx = crop_start_x_ - dx; min_ly = crop_start_y_ - dy;
+                max_lx = crop_start_x_ + dx; max_ly = crop_start_y_ + dy;
+            } else {
+                min_lx = std::min(crop_start_x_, crop_end_x_); min_ly = std::min(crop_start_y_, crop_end_y_);
+                max_lx = std::max(crop_start_x_, crop_end_x_); max_ly = std::max(crop_start_y_, crop_end_y_);
+            }
+            return {min_lx, min_ly, max_lx, max_ly};
+        }
+
+        // Extracted Drawing Methods
+        void draw_snap_lines();
+        void draw_selection_gizmo(const ImageLayer& l, bool is_primary);
+        void draw_crop_gizmo();
+
+        // Extracted Event Handlers
+        int handle_keydown(int key);
+        int handle_mouse_push();
+        int handle_mouse_drag();
+        int handle_mouse_release();
+        void apply_snapping(double& final_ddx, double& final_ddy, const Rect2D& target_bounds);
+        void handle_scale_drag(double world_x, double world_y);
+        void handle_rotate_drag(double world_x, double world_y);
+
     public:
-        // Dependency Injection for Undo manager
         void set_undo_manager(std::shared_ptr<IUndoManager> um) { undo_mgr_ = um; }
         std::shared_ptr<IUndoManager> undo_manager() const { return undo_mgr_; }
         std::shared_ptr<EditorState> state() const { return state_; }
 
-        // Observer event bridges
         void on_document_changed() override
         {
             invalidate();
@@ -230,6 +264,52 @@ namespace mui
             out_ly = local_pt.y;
         }
 
+        Rect2D get_layer_world_bounds_at(const ImageLayer &l, double at_x, double at_y) const
+        {
+            Rect2D b = l.get_effective_bounds();
+            double dx = b.x - l.x;
+            double dy = b.y - l.y;
+            return Transform::get_rotated_bounds(at_x + dx, at_y + dy, b.w, b.h, l.rotation_angle);
+        }
+
+        Rect2D get_layer_world_bounds(const ImageLayer &l) const
+        {
+            return get_layer_world_bounds_at(l, l.x, l.y);
+        }
+
+        Rect2D get_selection_world_bounds()
+        {
+            if (state_->selection_ids().empty())
+                return {0, 0, 0, 0};
+            double min_x = 1e99, min_y = 1e99, max_x = -1e99, max_y = -1e99;
+            bool first = true;
+            for (int id : state_->selection_ids())
+            {
+                if (auto l = get_image_layer(state_->document()->get_layer_index(id)))
+                {
+                    Rect2D b = get_layer_world_bounds(*l);
+                    if (first)
+                    {
+                        min_x = b.x;
+                        min_y = b.y;
+                        max_x = b.x + b.w;
+                        max_y = b.y + b.h;
+                        first = false;
+                    }
+                    else
+                    {
+                        min_x = std::min(min_x, b.x);
+                        min_y = std::min(min_y, b.y);
+                        max_x = std::max(max_x, b.x + b.w);
+                        max_y = std::max(max_y, b.y + b.h);
+                    }
+                }
+            }
+            if (first)
+                return {0, 0, 0, 0};
+            return {min_x, min_y, max_x - min_x, max_y - min_y};
+        }
+
         template <typename Action>
         void perform_heavy_undoable_action(Action action)
         {
@@ -250,15 +330,8 @@ namespace mui
             state_->notify_changed();
         }
 
-        void undo()
-        {
-            undo_mgr_->undo(*state_);
-        }
-
-        void redo()
-        {
-            undo_mgr_->redo(*state_);
-        }
+        void undo() { undo_mgr_->undo(*state_); }
+        void redo() { undo_mgr_->redo(*state_); }
 
         bool is_layer_visible(int index) const
         {
@@ -309,8 +382,7 @@ namespace mui
             {
                 auto layer = std::static_pointer_cast<ImageLayer>(state_->document()->get_layer(i));
                 Rect2D b = layer_effective_rect(*layer);
-                Rect2D rot_b = Transform::get_rotated_bounds(b.x, b.y, b.w, b.h,
-                                                             layer->rotation_angle);
+                Rect2D rot_b = Transform::get_rotated_bounds(b.x, b.y, b.w, b.h, layer->rotation_angle);
                 min_x = std::min(min_x, rot_b.x);
                 max_x = std::max(max_x, rot_b.x + rot_b.w);
                 min_y = std::min(min_y, rot_b.y);
@@ -370,13 +442,11 @@ namespace mui
         void sample_color(int mx, int my, double world_x, double world_y);
         virtual void draw_background(int cx, int cy, int cw, int ch);
         void draw_handle(int hx, int hy, bool is_hovered);
-        virtual void draw_overlays(int cx, int cy, int cw, int ch);
+        virtual void draw_overlays();
         bool hit_test_minimap(int mx, int my);
         void pan_minimap_to(int mx, int my);
         void draw_minimap();
-        void render_layer_to_buffer(const ImageLayer &layer, int layer_idx,
-                                    int target_w, int target_h,
-                                    double view_x, double view_y, double scale);
+        void render_layer_to_buffer(const ImageLayer &layer, int layer_idx, int target_w, int target_h, double view_x, double view_y, double scale);
         void draw() override;
         void export_image(const char *filepath);
         int hit_test(double world_x, double world_y);

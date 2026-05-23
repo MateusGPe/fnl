@@ -22,6 +22,11 @@ namespace mui
     {
         double x, y, w, h;
     };
+    struct Line2D
+    {
+        Point2D p1;
+        Point2D p2;
+    };
     enum class DocumentMode
     {
         InfiniteCanvas,

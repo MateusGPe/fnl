@@ -438,6 +438,164 @@ void test_multi_selection(mui::AdvancedImageViewer &viewer)
     std::cout << "PASSED: test_multi_selection" << std::endl;
 }
 
+void test_duplicate_layer(mui::AdvancedImageViewer &viewer)
+{
+    std::cout << "Running: test_duplicate_layer..." << std::endl;
+    viewer.clear_layers();
+    uchar pixels[1 * 1 * 3] = {0, 0, 0};
+    auto img = std::make_shared<mui::Image>(new Fl_RGB_Image(pixels, 1, 1, 3));
+    viewer.add_layer(img, "Original");
+    assert(viewer.document()->layer_count() == 1);
+
+    viewer.duplicate_layer(0);
+
+    assert(viewer.document()->layer_count() == 2);
+    auto original = viewer.get_image_layer(0);
+    auto duplicate = viewer.get_image_layer(1);
+    assert(original->name == "Original");
+    assert(duplicate->name == "Original (Copy)");
+    assert(viewer.selected_layer() == 1); // new layer is selected
+
+    viewer.undo();
+    assert(viewer.document()->layer_count() == 1);
+    assert(viewer.document()->get_layer(0)->name == "Original");
+    assert(viewer.selected_layer() == 0);
+
+    viewer.redo();
+    assert(viewer.document()->layer_count() == 2);
+    assert(viewer.selected_layer() == 1);
+
+    std::cout << "PASSED: test_duplicate_layer" << std::endl;
+}
+
+void test_rename_layer(mui::AdvancedImageViewer &viewer)
+{
+    std::cout << "Running: test_rename_layer..." << std::endl;
+    viewer.clear_layers();
+    uchar pixels[1 * 1 * 3] = {0, 0, 0};
+    auto img = std::make_shared<mui::Image>(new Fl_RGB_Image(pixels, 1, 1, 3));
+    viewer.add_layer(img, "Old Name");
+
+    viewer.rename_layer(0, "New Name");
+    assert(viewer.get_image_layer(0)->name == "New Name");
+
+    viewer.undo();
+    assert(viewer.get_image_layer(0)->name == "Old Name");
+
+    viewer.redo();
+    assert(viewer.get_image_layer(0)->name == "New Name");
+
+    std::cout << "PASSED: test_rename_layer" << std::endl;
+}
+
+void test_layer_reordering(mui::AdvancedImageViewer &viewer)
+{
+    std::cout << "Running: test_layer_reordering..." << std::endl;
+    viewer.clear_layers();
+    uchar pixels[1 * 1 * 3] = {0, 0, 0};
+    auto img = std::make_shared<mui::Image>(new Fl_RGB_Image(pixels, 1, 1, 3));
+    viewer.add_layer(img, "L1"); // index 0
+    viewer.add_layer(img, "L2"); // index 1
+    viewer.add_layer(img, "L3"); // index 2
+
+    // Bring L1 to front
+    viewer.bring_to_front(0);
+    assert(viewer.document()->get_layer(0)->name == "L2");
+    assert(viewer.document()->get_layer(1)->name == "L3");
+    assert(viewer.document()->get_layer(2)->name == "L1");
+
+    viewer.undo();
+    assert(viewer.document()->get_layer(0)->name == "L1");
+    assert(viewer.document()->get_layer(1)->name == "L2");
+    assert(viewer.document()->get_layer(2)->name == "L3");
+
+    // Send L3 to back
+    viewer.send_to_back(2);
+    assert(viewer.document()->get_layer(0)->name == "L3");
+    assert(viewer.document()->get_layer(1)->name == "L1");
+    assert(viewer.document()->get_layer(2)->name == "L2");
+
+    viewer.undo();
+    assert(viewer.document()->get_layer(0)->name == "L1");
+    assert(viewer.document()->get_layer(1)->name == "L2");
+    assert(viewer.document()->get_layer(2)->name == "L3");
+
+    std::cout << "PASSED: test_layer_reordering" << std::endl;
+}
+
+void test_alignment(mui::AdvancedImageViewer &viewer)
+{
+    std::cout << "Running: test_alignment..." << std::endl;
+    viewer.clear_layers();
+    uchar pixels[10 * 10 * 3] = {};
+    auto img = std::make_shared<mui::Image>(new Fl_RGB_Image(pixels, 10, 10, 3));
+    viewer.add_layer(img, "L1", 0, 0);   // 10x10 at (0,0)
+    viewer.add_layer(img, "L2", 50, 50); // 10x10 at (50,50)
+
+    viewer.select_layer(1);
+    viewer.add_to_selection(0);
+    assert(viewer.selected_layer() == 0); // L1 is primary
+
+    viewer.align_selection_left();
+    assert(approx_equal(viewer.get_image_layer(0)->x, 0.0));
+    assert(approx_equal(viewer.get_image_layer(1)->x, 0.0));
+    assert(approx_equal(viewer.get_image_layer(1)->y, 50.0));
+
+    viewer.undo();
+    assert(approx_equal(viewer.get_image_layer(1)->x, 50.0));
+
+    std::cout << "PASSED: test_alignment" << std::endl;
+}
+
+void test_full_selection(mui::AdvancedImageViewer &viewer)
+{
+    std::cout << "Running: test_full_selection..." << std::endl;
+    viewer.clear_layers();
+    uchar pixels[1 * 1 * 3] = {0, 0, 0};
+    auto img = std::make_shared<mui::Image>(new Fl_RGB_Image(pixels, 1, 1, 3));
+    viewer.add_layer(img, "L1");
+    viewer.add_layer(img, "L2");
+    viewer.add_layer(img, "L3");
+
+    viewer.select_all();
+    assert(viewer.selection_count() == 3);
+
+    viewer.clear_selection();
+    assert(viewer.selection_count() == 0);
+    viewer.undo();
+    assert(viewer.selection_count() == 3);
+
+    std::cout << "PASSED: test_full_selection" << std::endl;
+}
+
+void test_distribution(mui::AdvancedImageViewer &viewer)
+{
+    std::cout << "Running: test_distribution..." << std::endl;
+    viewer.clear_layers();
+    uchar pixels[10 * 10 * 3] = {};
+    auto img = std::make_shared<mui::Image>(new Fl_RGB_Image(pixels, 10, 10, 3));
+    viewer.add_layer(img, "L1", 0, 0);   // index 0
+    viewer.add_layer(img, "L2", 50, 0);  // index 1
+    viewer.add_layer(img, "L3", 150, 0); // index 2
+
+    viewer.select_all();
+    assert(viewer.selection_count() == 3);
+
+    viewer.distribute_selection_horizontal();
+
+    // L1 and L3 are anchors. L2 should be moved.
+    // Span = (150+10) - 0 = 160. Total width = 30. Gap = (160-30)/2 = 65.
+    // L2 new x should be L1.x + L1.w + gap = 0 + 10 + 65 = 75.
+    assert(approx_equal(viewer.get_image_layer(0)->x, 0.0));
+    assert(approx_equal(viewer.get_image_layer(1)->x, 75.0));
+    assert(approx_equal(viewer.get_image_layer(2)->x, 150.0));
+
+    viewer.undo();
+    assert(approx_equal(viewer.get_image_layer(1)->x, 50.0));
+
+    std::cout << "PASSED: test_distribution" << std::endl;
+}
+
 int main(int, char **)
 {
     // We need a window for FLTK to be happy, but we don't need to show it.
@@ -459,6 +617,12 @@ int main(int, char **)
         test_crop(*viewer);
         test_layer_management(*viewer);
         test_multi_selection(*viewer);
+        test_duplicate_layer(*viewer);
+        test_rename_layer(*viewer);
+        test_layer_reordering(*viewer);
+        test_alignment(*viewer);
+        test_full_selection(*viewer);
+        test_distribution(*viewer);
     }
     catch (const std::exception &e)
     {

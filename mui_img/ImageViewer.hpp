@@ -204,6 +204,13 @@ namespace mui
             return *this;
         }
 
+        ImageViewer &snap_to_canvas(bool snap)
+        {
+            snap_to_canvas_ = snap;
+            return *this;
+        }
+        bool snap_to_canvas() const { return snap_to_canvas_; }
+
         ImageViewer &view_position(double x, double y)
         {
             view_x_ = x;

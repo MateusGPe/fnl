@@ -10,6 +10,7 @@
 #include <FL/Fl_Menu_Bar.H>
 #include <FL/Fl_Box.H>
 #include <FL/Fl_Output.H>
+#include <FL/fl_ask.H>
 
 class ImageViewerApp;
 class LayerBrowser : public Fl_Browser
@@ -44,6 +45,7 @@ private:
     mui::Spinner *m_canvas_w_spinner_handle = nullptr;
     mui::Spinner *m_canvas_h_spinner_handle = nullptr;
 
+    bool m_snap_to_canvas = true;
     bool m_use_solid_bg = false;
     Fl_Color m_solid_bg_color = FL_WHITE;
     int m_grid_size = 25;
@@ -54,6 +56,7 @@ public:
     {
         build_ui();
         m_layer_list->app = this;
+        m_viewer->snap_to_canvas(m_snap_to_canvas);
     }
 
     void load_image(const char *filepath, int x, int y)
@@ -188,6 +191,87 @@ public:
         set_tool(4);
     }
 
+    void on_duplicate_layer()
+    {
+        int sel = m_viewer->selected_layer();
+        if (sel >= 0)
+        {
+            m_viewer->duplicate_layer(sel);
+            sync_layer_list();
+        }
+    }
+
+    void on_rename_layer()
+    {
+        int sel = m_viewer->selected_layer();
+        if (sel >= 0)
+        {
+            auto layer = m_viewer->get_image_layer(sel);
+            if (!layer)
+                return;
+            const char *new_name = fl_input("Enter new layer name:", layer->name.c_str());
+            if (new_name)
+            {
+                m_viewer->rename_layer(sel, new_name);
+                sync_layer_list();
+            }
+        }
+    }
+
+    void on_bring_to_front()
+    {
+        int sel = m_viewer->selected_layer();
+        if (sel >= 0)
+        {
+            m_viewer->bring_to_front(sel);
+            sync_layer_list();
+        }
+    }
+
+    void on_send_to_back()
+    {
+        int sel = m_viewer->selected_layer();
+        if (sel >= 0)
+        {
+            m_viewer->send_to_back(sel);
+            sync_layer_list();
+        }
+    }
+
+    void on_select_all()
+    {
+        m_viewer->select_all();
+        sync_layer_list();
+    }
+
+    void on_deselect_all()
+    {
+        m_viewer->clear_selection();
+        sync_layer_list();
+    }
+
+    void on_invert_selection()
+    {
+        m_viewer->invert_selection();
+        sync_layer_list();
+    }
+
+    void on_align_left() { m_viewer->align_selection_left(); }
+    void on_align_right() { m_viewer->align_selection_right(); }
+    void on_align_top() { m_viewer->align_selection_top(); }
+    void on_align_bottom() { m_viewer->align_selection_bottom(); }
+    void on_align_center_h() { m_viewer->align_selection_center_h(); }
+    void on_align_center_v() { m_viewer->align_selection_center_v(); }
+
+    void on_distribute_h() { m_viewer->distribute_selection_horizontal(); }
+    void on_distribute_v() { m_viewer->distribute_selection_vertical(); }
+
+    void on_toggle_snap_to_canvas(bool snap)
+    {
+        m_snap_to_canvas = snap;
+        m_viewer->snap_to_canvas(m_snap_to_canvas);
+    }
+
     void on_opacity_changed()
     {
         if (m_opacity_slider_handle && m_viewer->selected_layer() >= 0)
@@ -265,6 +349,18 @@ public:
              {
                  static_cast<ImageViewerApp *>(v)->on_layer_down();
              },
+             this},
+            {"Bring to Front", 0,
+             [](Fl_Widget *, void *v)
+             {
+                 static_cast<ImageViewerApp *>(v)->on_bring_to_front();
+             },
+             this},
+            {"Send to Back", 0,
+             [](Fl_Widget *, void *v)
+             {
+                 static_cast<ImageViewerApp *>(v)->on_send_to_back();
+             },
              this, FL_MENU_DIVIDER},
             {"Group to Below Layer", 0,
              [](Fl_Widget *, void *v)
@@ -276,6 +372,18 @@ public:
              [](Fl_Widget *, void *v)
              {
                  static_cast<ImageViewerApp *>(v)->on_ungroup_layer();
+             },
+             this, FL_MENU_DIVIDER},
+            {"Duplicate Layer", FL_CTRL + 'd',
+             [](Fl_Widget *, void *v)
+             {
+                 static_cast<ImageViewerApp *>(v)->on_duplicate_layer();
+             },
+             this},
+            {"Rename Layer...", 0,
+             [](Fl_Widget *, void *v)
+             {
+                 static_cast<ImageViewerApp *>(v)->on_rename_layer();
              },
              this, FL_MENU_DIVIDER},
             {"Toggle Visibility", 0,
@@ -565,6 +673,16 @@ public:
                       { static_cast<ImageViewerApp *>(v)->on_redo(); }, this);
         menu_bar->add("Edit/Clear All", 0, [](Fl_Widget *, void *v)
                       { static_cast<ImageViewerApp *>(v)->on_clear_layers(); }, this);
+        menu_bar->add("Edit/Duplicate Layer", FL_CTRL + 'd', [](Fl_Widget *, void *v)
+                      { static_cast<ImageViewerApp *>(v)->on_duplicate_layer(); }, this);
+
+        menu_bar->add("Select/Select All", FL_CTRL + 'a', [](Fl_Widget *, void *v)
+                      { static_cast<ImageViewerApp *>(v)->on_select_all(); }, this);
+        menu_bar->add("Select/Deselect All", FL_CTRL + FL_SHIFT + 'a', [](Fl_Widget *, void *v)
+                      { static_cast<ImageViewerApp *>(v)->on_deselect_all(); }, this);
+        menu_bar->add("Select/Invert Selection", FL_CTRL + 'i', [](Fl_Widget *, void *v)
+                      { static_cast<ImageViewerApp *>(v)->on_invert_selection(); }, this);
+
         menu_bar->add("View/Reset View", FL_CTRL + '0', [](Fl_Widget *, void *v)
                       { static_cast<ImageViewerApp *>(v)->on_reset_view(); }, this);
         menu_bar->add("View/Toggle Grid", FL_CTRL + 'g', [](Fl_Widget *, void *v)
@@ -602,12 +720,38 @@ public:
             menu_bar->add(path.c_str(), 0, theme_cb, this, flags);
         }
 
+        menu_bar->add("Align/Left Edges", 0, [](Fl_Widget *, void *v)
+                      { static_cast<ImageViewerApp *>(v)->on_align_left(); }, this);
+        menu_bar->add("Align/Right Edges", 0, [](Fl_Widget *, void *v)
+                      { static_cast<ImageViewerApp *>(v)->on_align_right(); }, this);
+        menu_bar->add("Align/Top Edges", 0, [](Fl_Widget *, void *v)
+                      { static_cast<ImageViewerApp *>(v)->on_align_top(); }, this);
+        menu_bar->add("Align/Bottom Edges", 0, [](Fl_Widget *, void *v)
+                      { static_cast<ImageViewerApp *>(v)->on_align_bottom(); }, this);
+        menu_bar->add("Align/Horizontal Centers", 0, [](Fl_Widget *, void *v)
+                      { static_cast<ImageViewerApp *>(v)->on_align_center_h(); }, this);
+        menu_bar->add("Align/Vertical Centers", 0, [](Fl_Widget *, void *v)
+                      { static_cast<ImageViewerApp *>(v)->on_align_center_v(); }, this);
+        menu_bar->add("Align/---", 0, 0, 0, FL_MENU_DIVIDER);
+        menu_bar->add("Align/Distribute Horizontal", 0, [](Fl_Widget *, void *v)
+                      { static_cast<ImageViewerApp *>(v)->on_distribute_h(); }, this);
+        menu_bar->add("Align/Distribute Vertical", 0, [](Fl_Widget *, void *v)
+                      { static_cast<ImageViewerApp *>(v)->on_distribute_v(); }, this);
+        menu_bar->add("Align/---", 0, 0, 0, FL_MENU_DIVIDER);
+        menu_bar->add("Align/Snap to Canvas", 0, [](Fl_Widget *w, void *v)
+                      {
+            auto app = static_cast<ImageViewerApp *>(v);
+            auto bar = static_cast<Fl_Menu_Bar*>(w);
+            const Fl_Menu_Item* item = bar->mvalue();
+            if (item) {
+                app->on_toggle_snap_to_canvas(item->value() != 0);
+            } }, this, FL_MENU_TOGGLE | FL_MENU_VALUE);
+
         menu_bar->add("Tools/Select", 'v', [](Fl_Widget *, void *v)
                       { static_cast<ImageViewerApp *>(v)->on_tool_select(); }, this);
         menu_bar->add("Tools/Pan", 'h', [](Fl_Widget *, void *v)
                       { static_cast<ImageViewerApp *>(v)->on_tool_pan(); }, this);
-        menu_bar->add("Tools/Move", 'm', [](Fl_Widget *, void *v)
-                      { static_cast<ImageViewerApp *>(v)->on_tool_move(); }, this);
+        menu_bar->add("Tools/Move", 'm', [](Fl_Widget *, void *v) { static_cast<ImageViewerApp *>(v)->on_tool_move(); }, this);
         menu_bar->add("Tools/Crop", 'c', [](Fl_Widget *, void *v)
                       { static_cast<ImageViewerApp *>(v)->on_tool_crop(); }, this);
         menu_bar->add("Tools/Eyedropper", 'i', [](Fl_Widget *, void *v)
@@ -769,6 +913,26 @@ public:
             },
             this);
         sy += 30;
+
+        mui::Button *front_btn = new mui::Button(sx, sy, btn_w, 25, "Front");
+        front_btn->callback([](Fl_Widget *, void *v)
+                            { static_cast<ImageViewerApp *>(v)->on_bring_to_front(); }, this);
+        mui::Button *back_btn = new mui::Button(sx + btn_w + 2, sy, btn_w, 25, "Back");
+        back_btn->callback([](Fl_Widget *, void *v)
+                           { static_cast<ImageViewerApp *>(v)->on_send_to_back(); }, this);
+        mui::Button *dup_btn = new mui::Button(sx + 2 * (btn_w + 2), sy, btn_w, 25, "Dup");
+        dup_btn->callback(
+            [](Fl_Widget *, void *v)
+            {
+                static_cast<ImageViewerApp *>(v)->on_duplicate_layer();
+            },
+            this);
+        mui::Button *ren_btn = new mui::Button(sx + 3 * (btn_w + 2), sy, btn_w, 25, "Rename");
+        ren_btn->callback(
+            [](Fl_Widget *, void *v)
+            { static_cast<ImageViewerApp *>(v)->on_rename_layer(); }, this);
+        sy += 30;
+
 
         m_layer_list = new LayerBrowser(sx, sy, sw, 200);
         m_layer_list->callback(

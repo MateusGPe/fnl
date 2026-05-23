@@ -56,140 +56,131 @@ namespace mui
         fl_rect(hx - r, hy - r, r * 2, r * 2);
     }
 
-    inline void InternalImageViewer::draw_overlays(int cx, int cy, int cw, int ch)
+    inline void InternalImageViewer::draw_snap_lines()
     {
-        int primary_sel_idx = get_selected_layer_index();
+        if (snap_lines_.empty()) return;
+        fl_color(ThemeManager::get_palette().focus_ring);
+        fl_line_style(FL_SOLID, 1);
+        for (const auto &line : snap_lines_)
+        {
+            int x1, y1, x2, y2;
+            world_to_screen(line.p1.x, line.p1.y, x1, y1);
+            world_to_screen(line.p2.x, line.p2.y, x2, y2);
+            fl_line(x1, y1, x2, y2);
+        }
+        fl_line_style(0);
+    }
 
+    inline void InternalImageViewer::draw_selection_gizmo(const ImageLayer& l, bool is_primary)
+    {
+        // 1. Draw dashed crop full-boundary reference (if primary & cropping tool active)
+        if (is_primary && active_tool_ == ViewerTool::Crop)
+        {
+            Point2D c = Transform::get_bounds_center(l.get_effective_bounds());
+            Rect2D full_b = {l.x, l.y, l.original_w * l.scale_x, l.original_h * l.scale_y};
+            auto full_corners = Transform::get_bounds_corners(full_b, c.x, c.y, l.rotation_angle, l.flip_h, l.flip_v);
+
+            fl_color(ThemeManager::get_palette().btn_frame.out_top);
+            fl_line_style(FL_DASH, 1);
+            fl_begin_loop();
+            for (const auto& pt : full_corners)
+            {
+                int sx, sy; world_to_screen(pt.x, pt.y, sx, sy);
+                fl_vertex(sx, sy);
+            }
+            fl_end_loop();
+            fl_line_style(0);
+        }
+
+        // Get unified gizmo math mapping 
+        double rot_offset = (ThemeManager::get_palette().metrics.imageviewer_handle_size * 2) / scale_;
+        auto gizmo = Transform::get_gizmo_handles(l, rot_offset);
+
+        int scx[4], scy[4];
+        for (int i = 0; i < 4; ++i) 
+        {
+            world_to_screen(gizmo.corners[i].x, gizmo.corners[i].y, scx[i], scy[i]);
+        }
+
+        // 2. Draw standard selection outline
+        fl_color(is_primary ? ThemeManager::get_palette().selection : fl_color_average(ThemeManager::get_palette().selection, ThemeManager::get_palette().bg_main, 0.5f));
+        fl_line_style(FL_DASH, ThemeManager::get_palette().metrics.imageviewer_selection_dash_width);
+        fl_begin_loop();
+        for (int i = 0; i < 4; ++i) fl_vertex(scx[i], scy[i]);
+        fl_end_loop();
+
+        // 3. Draw resize and rotation handles (if primary and unlocked)
+        if (is_primary && !l.locked)
+        {
+            fl_line_style(FL_SOLID, 1);
+            draw_handle(scx[0], scy[0], hover_mode_ == DragMode::ScaleTL);
+            draw_handle(scx[1], scy[1], hover_mode_ == DragMode::ScaleTR);
+            draw_handle(scx[2], scy[2], hover_mode_ == DragMode::ScaleBR);
+            draw_handle(scx[3], scy[3], hover_mode_ == DragMode::ScaleBL);
+
+            int r_sx, r_sy;
+            world_to_screen(gizmo.rot_handle.x, gizmo.rot_handle.y, r_sx, r_sy);
+
+            fl_color(ThemeManager::get_palette().btn_frame.out_top);
+            fl_line((scx[0] + scx[1]) / 2, (scy[0] + scy[1]) / 2, r_sx, r_sy);
+
+            const int r = ThemeManager::get_palette().metrics.imageviewer_handle_size / 2;
+            fl_color(hover_mode_ == DragMode::Rotate ? ThemeManager::get_palette().selection : ThemeManager::get_palette().bg_main);
+            fl_pie(r_sx - r, r_sy - r, r * 2, r * 2, 0, 360);
+            fl_color(ThemeManager::get_palette().btn_frame.out_top);
+            fl_arc(r_sx - r, r_sy - r, r * 2, r * 2, 0, 360);
+        }
+        fl_line_style(0);
+    }
+
+    inline void InternalImageViewer::draw_crop_gizmo()
+    {
+        int sel_idx = get_selected_layer_index();
+        if (drag_mode_ != DragMode::Crop || sel_idx < 0) return;
+        
+        if (auto l_ptr = get_image_layer(sel_idx)) 
+        {
+            auto &l = *l_ptr;
+            Point2D c = Transform::get_bounds_center(l.get_effective_bounds());
+            CropDragBox box = get_crop_drag_box();
+            Rect2D drag_b = {box.min_lx, box.min_ly, box.w(), box.h()};
+            
+            auto corners = Transform::get_bounds_corners(drag_b, c.x, c.y, l.rotation_angle, l.flip_h, l.flip_v);
+
+            fl_color(ThemeManager::get_palette().fg_main);
+            fl_line_style(FL_DASH, 2);
+            fl_begin_loop();
+            for (const auto& pt : corners) 
+            {
+                int sx, sy; world_to_screen(pt.x, pt.y, sx, sy);
+                fl_vertex(sx, sy);
+            }
+            fl_end_loop();
+            fl_line_style(0);
+        }
+    }
+
+    inline void InternalImageViewer::draw_overlays()
+    {
+        draw_snap_lines();
+
+        int primary_sel_idx = get_selected_layer_index();
         for (int layer_id : state_->selection_ids())
         {
             int sel_idx = state_->document()->get_layer_index(layer_id);
             if (auto l_ptr = get_image_layer(sel_idx))
             {
-                const auto &l = *l_ptr;
-                if (!is_layer_visible(sel_idx))
-                    continue;
-
-                bool is_primary = (sel_idx == primary_sel_idx);
-
-                Rect2D b = l.get_effective_bounds();
-                int sx = cx + static_cast<int>(std::round((b.x - view_x_) * scale_));
-                int sy = cy + static_cast<int>(std::round((b.y - view_y_) * scale_));
-                int sw = std::max(1, static_cast<int>(std::round(b.w * scale_)));
-                int sh = std::max(1, static_cast<int>(std::round(b.h * scale_)));
-
-                double layer_cx = sx + sw * 0.5, layer_cy = sy + sh * 0.5;
-
-                if (is_primary && active_tool_ == ViewerTool::Crop)
-                {
-                    int full_sx = cx + static_cast<int>(std::round((l.x - view_x_) * scale_));
-                    int full_sy = cy + static_cast<int>(std::round((l.y - view_y_) * scale_));
-                    int full_sw = std::max(1, static_cast<int>(std::round(l.original_w * l.scale_x * scale_)));
-                    int full_sh = std::max(1, static_cast<int>(std::round(l.original_h * l.scale_y * scale_)));
-
-                    double full_hw = full_sw * 0.5;
-                    double full_hh = full_sh * 0.5;
-                    double full_cx = full_sx + full_hw;
-                    double full_cy = full_sy + full_hh;
-
-                    Point2D tl = Transform::local_to_world(full_cx - full_hw, full_cy - full_hh, layer_cx, layer_cy, l.rotation_angle, l.flip_h, l.flip_v);
-                    Point2D tr = Transform::local_to_world(full_cx + full_hw, full_cy - full_hh, layer_cx, layer_cy, l.rotation_angle, l.flip_h, l.flip_v);
-                    Point2D br = Transform::local_to_world(full_cx + full_hw, full_cy + full_hh, layer_cx, layer_cy, l.rotation_angle, l.flip_h, l.flip_v);
-                    Point2D bl = Transform::local_to_world(full_cx - full_hw, full_cy + full_hh, layer_cx, layer_cy, l.rotation_angle, l.flip_h, l.flip_v);
-
-                    fl_color(ThemeManager::get_palette().btn_frame.out_top);
-                    fl_line_style(FL_DASH, 1);
-                    fl_begin_loop();
-                    fl_vertex(tl.x, tl.y);
-                    fl_vertex(tr.x, tr.y);
-                    fl_vertex(br.x, br.y);
-                    fl_vertex(bl.x, bl.y);
-                    fl_end_loop();
-                    fl_line_style(0);
-                }
-
-                if (is_primary)
-                    fl_color(ThemeManager::get_palette().selection);
-                else
-                    fl_color(fl_color_average(ThemeManager::get_palette().selection, ThemeManager::get_palette().bg_main, 0.5f));
-                fl_line_style(FL_DASH, ThemeManager::get_palette().metrics.imageviewer_selection_dash_width);
-
-                double hw = sw * 0.5;
-                double hh = sh * 0.5;
-
-                Point2D tl = Transform::local_to_world(layer_cx - hw, layer_cy - hh, layer_cx, layer_cy, l.rotation_angle, l.flip_h, l.flip_v);
-                Point2D tr = Transform::local_to_world(layer_cx + hw, layer_cy - hh, layer_cx, layer_cy, l.rotation_angle, l.flip_h, l.flip_v);
-                Point2D br = Transform::local_to_world(layer_cx + hw, layer_cy + hh, layer_cx, layer_cy, l.rotation_angle, l.flip_h, l.flip_v);
-                Point2D bl = Transform::local_to_world(layer_cx - hw, layer_cy + hh, layer_cx, layer_cy, l.rotation_angle, l.flip_h, l.flip_v);
-
-                fl_begin_loop();
-                fl_vertex(tl.x, tl.y);
-                fl_vertex(tr.x, tr.y);
-                fl_vertex(br.x, br.y);
-                fl_vertex(bl.x, bl.y);
-                fl_end_loop();
-
-                if (is_primary && !l.locked)
-                {
-                    fl_line_style(FL_SOLID, 1);
-                    draw_handle(static_cast<int>(tl.x), static_cast<int>(tl.y), hover_mode_ == DragMode::ScaleTL);
-                    draw_handle(static_cast<int>(tr.x), static_cast<int>(tr.y), hover_mode_ == DragMode::ScaleTR);
-                    draw_handle(static_cast<int>(bl.x), static_cast<int>(bl.y), hover_mode_ == DragMode::ScaleBL);
-                    draw_handle(static_cast<int>(br.x), static_cast<int>(br.y), hover_mode_ == DragMode::ScaleBR);
-                }
-
-                fl_line_style(0);
+                if (is_layer_visible(sel_idx))
+                    draw_selection_gizmo(*l_ptr, sel_idx == primary_sel_idx);
             }
         }
-
-        int sel_idx_for_crop = get_selected_layer_index();
-        if (drag_mode_ == DragMode::Crop && sel_idx_for_crop >= 0)
-        {
-            if (auto l_ptr = get_image_layer(sel_idx_for_crop))
-            {
-                auto &l = *l_ptr;
-
-                double lx = l.x;
-                double ly = l.y;
-                double lw = l.original_w * l.scale_x;
-                double lh = l.original_h * l.scale_y;
-                if (l.crop_w >= 0 && l.crop_h >= 0)
-                {
-                    lx += l.crop_x * l.scale_x;
-                    ly += l.crop_y * l.scale_y;
-                    lw = l.crop_w * l.scale_x;
-                    lh = l.crop_h * l.scale_y;
-                }
-
-                double rot_cx = lx + lw * 0.5;
-                double rot_cy = ly + lh * 0.5;
-
-                double min_lx = std::min(crop_start_x_, crop_end_x_);
-                double min_ly = std::min(crop_start_y_, crop_end_y_);
-                double max_lx = std::max(crop_start_x_, crop_end_x_);
-                double max_ly = std::max(crop_start_y_, crop_end_y_);
-
-                Point2D pts[4] = {{min_lx, min_ly}, {max_lx, min_ly}, {max_lx, max_ly}, {min_lx, max_ly}};
-
-                fl_color(ThemeManager::get_palette().fg_main);
-                fl_line_style(FL_DASH, 2);
-                fl_begin_loop();
-                for (int j = 0; j < 4; ++j)
-                {
-                    Point2D w_pt = Transform::local_to_world(pts[j].x, pts[j].y, rot_cx, rot_cy, l.rotation_angle, l.flip_h, l.flip_v);
-                    int screen_x = cx + static_cast<int>(std::round((w_pt.x - view_x_) * scale_));
-                    int screen_y = cy + static_cast<int>(std::round((w_pt.y - view_y_) * scale_));
-                    fl_vertex(screen_x, screen_y);
-                }
-                fl_end_loop();
-            }
-            fl_line_style(0);
-        }
+        
+        draw_crop_gizmo();
     }
 
     inline void InternalImageViewer::draw_minimap()
     {
-        if (!show_minimap_ || w() <= 0 || h() <= 0)
-            return;
+        if (!show_minimap_ || w() <= 0 || h() <= 0) return;
 
         MinimapInfo mi = get_minimap_info();
         fl_color(fl_color_average(ThemeManager::get_palette().bg_main, FL_BLACK, 0.7f));
@@ -201,23 +192,16 @@ namespace mui
 
         for (size_t i = 0; i < state_->document()->layer_count(); ++i)
         {
-            if (!is_layer_visible(i))
-                continue;
-            if (auto layer_ptr = get_image_layer(i))
+            if (!is_layer_visible(i)) continue;
+            if (auto l_ptr = get_image_layer(i))
             {
-                const auto &layer = *layer_ptr;
-
-                Rect2D b = layer.get_effective_bounds();
-                double rot_cx = b.x + b.w * 0.5, rot_cy = b.y + b.h * 0.5;
-                double hw = b.w * 0.5, hh = b.h * 0.5;
-
+                auto corners = Transform::get_layer_corners(*l_ptr);
                 fl_color(ThemeManager::get_palette().inactive);
                 fl_begin_polygon();
-                Point2D pts[4] = {{-hw, -hh}, {hw, -hh}, {hw, hh}, {-hw, hh}};
                 for (int j = 0; j < 4; ++j)
                 {
-                    Point2D w_pt = Transform::local_to_world(rot_cx + pts[j].x, rot_cy + pts[j].y, rot_cx, rot_cy, layer.rotation_angle, layer.flip_h, layer.flip_v);
-                    fl_vertex(mi.offset_x + (w_pt.x - mi.min_x) * mi.scale, mi.offset_y + (w_pt.y - mi.min_y) * mi.scale);
+                    fl_vertex(mi.offset_x + (corners[j].x - mi.min_x) * mi.scale, 
+                              mi.offset_y + (corners[j].y - mi.min_y) * mi.scale);
                 }
                 fl_end_polygon();
             }
@@ -297,7 +281,7 @@ namespace mui
                 if (clip_w > 0 && clip_h > 0)
                 {
                     uchar *bg = fl_read_image(nullptr, clip_x, clip_y, clip_w, clip_h, 0);
-                    std::unique_ptr<uchar[]> bg_guard(bg); // Auto-cleanup
+                    std::unique_ptr<uchar[]> bg_guard(bg); 
                     if (bg && fg)
                     {
                         size_t buffer_size = static_cast<size_t>(clip_w) * static_cast<size_t>(clip_h) * 3;
@@ -320,8 +304,6 @@ namespace mui
 
                                 double screen_px = clip_x + xx;
                                 double screen_py = clip_y + yy;
-                                double tx = screen_px - dst_cx;
-                                double ty = screen_py - dst_cy;
 
                                 Point2D loc = Transform::world_to_local(screen_px, screen_py, dst_cx, dst_cy, layer.rotation_angle, layer.flip_h, layer.flip_v);
                                 double norm_x = (loc.x - dst_cx + hw) / draw_sw;
@@ -331,19 +313,14 @@ namespace mui
                                 {
                                     double src_px = actual_crop_x + norm_x * actual_crop_w;
                                     double src_py = actual_crop_y + norm_y * actual_crop_h;
-
                                     float fr, fg_g_val, fb, fa;
 
                                     if (bilinear_filtering_)
-                                    {
                                         PixelBlender::bilerp(fg, src_px, src_py, img_w, img_h, fg_ld, fg_d, fr, fg_g_val, fb, fa);
-                                    }
                                     else
                                     {
-                                        int src_x_int = static_cast<int>(std::round(src_px));
-                                        int src_y_int = static_cast<int>(std::round(src_py));
-                                        src_x_int = std::clamp(src_x_int, 0, img_w - 1);
-                                        src_y_int = std::clamp(src_y_int, 0, img_h - 1);
+                                        int src_x_int = std::clamp(static_cast<int>(std::round(src_px)), 0, img_w - 1);
+                                        int src_y_int = std::clamp(static_cast<int>(std::round(src_py)), 0, img_h - 1);
 
                                         const int fg_idx = src_y_int * fg_ld + src_x_int * fg_d;
                                         fr = fg[fg_idx];
@@ -354,9 +331,7 @@ namespace mui
 
                                     const float alpha = (fa / 255.0f) * layer.alpha;
                                     if (alpha > 0.0f)
-                                    {
                                         PixelBlender::blend_pixels(layer.blend_mode, fr, fg_g_val, fb, br, bg_g, bb, alpha, &blended[bg_idx]);
-                                    }
                                 }
                             }
                         }
@@ -383,10 +358,7 @@ namespace mui
 
             layer.image->handle()->draw(draw_sx, draw_sy, draw_sw, draw_sh, crop_off_x, crop_off_y);
 
-            if (apply_matrix)
-            {
-                fl_pop_matrix();
-            }
+            if (apply_matrix) fl_pop_matrix();
         }
 
         fl_pop_clip();
@@ -394,8 +366,7 @@ namespace mui
 
     inline void InternalImageViewer::draw()
     {
-        if (w() <= 0 || h() <= 0)
-            return;
+        if (w() <= 0 || h() <= 0) return;
 
         if (!use_solid_bg_)
         {
@@ -410,8 +381,7 @@ namespace mui
         fl_push_clip(x(), y(), w(), h());
         if (bg_dirty_ || !bg_buffer_ || off_w_ != w() || off_h_ != h())
         {
-            if (bg_buffer_)
-                fl_delete_offscreen(bg_buffer_);
+            if (bg_buffer_) fl_delete_offscreen(bg_buffer_);
             bg_buffer_ = fl_create_offscreen(w(), h());
             off_w_ = w();
             off_h_ = h();
@@ -435,15 +405,12 @@ namespace mui
                     render_layer_to_buffer(*l, i, w(), h(), view_x_, view_y_, scale_);
             }
 
-            if (state_->document()->mode() == DocumentMode::FixedCanvas)
-            {
-                fl_pop_clip();
-            }
+            if (state_->document()->mode() == DocumentMode::FixedCanvas) fl_pop_clip();
             fl_end_offscreen();
         }
 
         fl_copy_offscreen(x(), y(), w(), h(), bg_buffer_, 0, 0);
-        draw_overlays(x(), y(), w(), h());
+        draw_overlays();
         draw_minimap();
         fl_pop_clip();
     }
@@ -456,14 +423,10 @@ namespace mui
         int world_h = std::max(1, static_cast<int>(std::round(max_y - min_y)));
 
         if (world_w <= 0 || world_h <= 0 || world_w > 16384 || world_h > 16384)
-        {
-            fprintf(stderr, "Export failed: Invalid or excessively large dimensions.\n");
             return;
-        }
 
         Fl_Offscreen off = fl_create_offscreen(world_w, world_h);
-        if (!off)
-            return;
+        if (!off) return;
 
         fl_begin_offscreen(off);
         if (use_solid_bg_)
@@ -475,13 +438,11 @@ namespace mui
         {
             const int checker_size = grid_size_;
             for (int j = 0; j < world_h; j += checker_size)
-            {
                 for (int i = 0; i < world_w; i += checker_size)
                 {
                     fl_color((((i / checker_size) + (j / checker_size)) % 2 == 0) ? ThemeManager::get_palette().bg_main : ThemeManager::get_palette().bg_sec);
                     fl_rectf(i, j, checker_size, checker_size);
                 }
-            }
         }
 
         for (size_t i = 0; i < state_->document()->layer_count(); ++i)
